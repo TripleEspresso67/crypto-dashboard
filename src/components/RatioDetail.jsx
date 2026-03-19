@@ -35,6 +35,20 @@ export default function RatioDetail({ ratioData, loading }) {
   const activeDateStr = selectedPreset === 'custom' ? customDate : selectedPreset;
   const backtestStart = new Date(activeDateStr + 'T00:00:00Z').getTime();
 
+  const sortedPairs = ratioData?.pairs?.slice().sort((a, b) => b.score - a.score);
+  const pair = sortedPairs?.[idx] ?? null;
+
+  const recomputedBacktest = useMemo(() => {
+    if (!pair) return null;
+    return runBacktest(
+      pair.candles,
+      pair.compositeScores,
+      MTTI_OTHERS_PARAMS.longThresh,
+      MTTI_OTHERS_PARAMS.shortThresh,
+      backtestStart
+    );
+  }, [pair, backtestStart]);
+
   if (loading) {
     return (
       <div className="loading">
@@ -43,9 +57,6 @@ export default function RatioDetail({ ratioData, loading }) {
       </div>
     );
   }
-
-  const sortedPairs = ratioData?.pairs?.slice().sort((a, b) => b.score - a.score);
-  const pair = sortedPairs?.[idx];
 
   if (!pair) {
     return (
@@ -61,16 +72,6 @@ export default function RatioDetail({ ratioData, loading }) {
   const lastScore = pair.compositeScores[pair.compositeScores.length - 1];
   const lastSignal = pair.signals[pair.signals.length - 1];
   const lastCandle = pair.candles[pair.candles.length - 1];
-
-  const recomputedBacktest = useMemo(() => {
-    return runBacktest(
-      pair.candles,
-      pair.compositeScores,
-      MTTI_OTHERS_PARAMS.longThresh,
-      MTTI_OTHERS_PARAMS.shortThresh,
-      backtestStart
-    );
-  }, [pair.candles, pair.compositeScores, backtestStart]);
 
   function handlePresetChange(e) {
     const val = e.target.value;
@@ -161,18 +162,18 @@ export default function RatioDetail({ ratioData, loading }) {
           </div>
         </div>
         <div style={{ marginTop: 12 }}>
-          <StatsPanel stats={recomputedBacktest.stats} />
+          <StatsPanel stats={recomputedBacktest?.stats} />
         </div>
       </div>
 
       <div className="section">
         <h3 className="section-title">Equity Curve</h3>
-        <EquityCurve equity={recomputedBacktest.equity} />
+        <EquityCurve equity={recomputedBacktest?.equity} />
       </div>
 
       <div className="section">
         <h3 className="section-title">Trade History</h3>
-        <TradeList trades={recomputedBacktest.trades} />
+        <TradeList trades={recomputedBacktest?.trades} />
       </div>
     </div>
   );

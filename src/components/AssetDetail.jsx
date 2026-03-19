@@ -43,6 +43,20 @@ export default function AssetDetail({ assetData, loading }) {
   const activeDateStr = selectedPreset === 'custom' ? customDate : selectedPreset;
   const backtestStart = new Date(activeDateStr + 'T00:00:00Z').getTime();
 
+  const asset = assetData?.[idx] ?? null;
+
+  const recomputedBacktest = useMemo(() => {
+    if (!asset) return null;
+    const stratParams = STRATEGY_PARAMS[asset.config.strategy];
+    return runBacktest(
+      asset.candles,
+      asset.compositeScores,
+      stratParams.longThresh,
+      stratParams.shortThresh,
+      backtestStart
+    );
+  }, [asset, backtestStart]);
+
   if (loading) {
     return (
       <div className="loading">
@@ -52,7 +66,7 @@ export default function AssetDetail({ assetData, loading }) {
     );
   }
 
-  if (!assetData || !assetData[idx]) {
+  if (!asset) {
     return (
       <div className="detail-page">
         <span className="back-link" onClick={() => navigate('/')}>
@@ -63,21 +77,9 @@ export default function AssetDetail({ assetData, loading }) {
     );
   }
 
-  const asset = assetData[idx];
   const lastCandle = asset.candles[asset.candles.length - 1];
   const lastScore = asset.compositeScores[asset.compositeScores.length - 1];
   const lastSignal = asset.signals[asset.signals.length - 1];
-
-  const recomputedBacktest = useMemo(() => {
-    const stratParams = STRATEGY_PARAMS[asset.config.strategy];
-    return runBacktest(
-      asset.candles,
-      asset.compositeScores,
-      stratParams.longThresh,
-      stratParams.shortThresh,
-      backtestStart
-    );
-  }, [asset.candles, asset.compositeScores, asset.config.strategy, backtestStart]);
 
   function formatPrice(p) {
     if (p >= 1000) return `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -166,18 +168,18 @@ export default function AssetDetail({ assetData, loading }) {
           </div>
         </div>
         <div style={{ marginTop: 12 }}>
-          <StatsPanel stats={recomputedBacktest.stats} />
+          <StatsPanel stats={recomputedBacktest?.stats} />
         </div>
       </div>
 
       <div className="section">
         <h3 className="section-title">Equity Curve</h3>
-        <EquityCurve equity={recomputedBacktest.equity} />
+        <EquityCurve equity={recomputedBacktest?.equity} />
       </div>
 
       <div className="section">
         <h3 className="section-title">Trade History</h3>
-        <TradeList trades={recomputedBacktest.trades} />
+        <TradeList trades={recomputedBacktest?.trades} />
       </div>
     </div>
   );
