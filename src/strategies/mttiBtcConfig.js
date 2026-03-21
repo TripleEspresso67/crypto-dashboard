@@ -20,7 +20,7 @@ export const MTTI_BTC_PARAMS = {
     dpsd_PerLen: 32, dpsd_perUp: 60, dpsd_perDown: 40,
     dpsd_SDlen: 27, dpsd_EmaLen: 25
   },
-  rsiMomentumTrend: { rmt_Len2: 14, rmt_pmom: 55, rmt_nmom: 48 },
+  rsiMomentumTrend: { rmt_Len2: 14, rmt_pmom: 60, rmt_nmom: 50 },
   stochForLoop: {
     st_smoothK: 1, st_periodD: 5, st_scoreBy: 'd > 50',
     st_a: 20, st_b: 35, st_maType: 'EMA', st_maLen: 9,

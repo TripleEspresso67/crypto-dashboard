@@ -1,28 +1,11 @@
 import { ema, sma, wma, vwma, dema, trima, nz } from './helpers.js';
 
 /**
- * Compute raw stochastic %K for a given lookback length.
- */
-function computeStoch(high, low, close, stochLen) {
-  const raw = new Array(close.length).fill(0);
-  for (let i = 0; i < close.length; i++) {
-    const lookback = Math.min(stochLen, i + 1);
-    let hh = high[i];
-    let ll = low[i];
-    for (let j = 1; j < lookback; j++) {
-      hh = Math.max(hh, high[i - j]);
-      ll = Math.min(ll, low[i - j]);
-    }
-    const denom = hh - ll;
-    raw[i] = denom !== 0 ? 100 * (close[i] - ll) / denom : 0;
-  }
-  return raw;
-}
-
-/**
  * STOCH ForLoop indicator score.
- * For each length in [a..b], compute stochastic, smooth with %K and %D,
- * score each, then average all scores and smooth with MA.
+ * For each length in [a..b], compute stochastic per bar, apply %K and %D
+ * smoothing, score each, then average all scores and smooth with MA.
+ *
+ * Matches Pine Script's bar-by-bar stochastic with historical smoothing.
  */
 export function stochForLoopScore(candles, params) {
   const {
@@ -40,14 +23,17 @@ export function stochForLoopScore(candles, params) {
   const a = Math.min(st_a, st_b);
   const b = Math.max(st_a, st_b);
   const n = b - a + 1;
+  const kLen = Math.max(st_smoothK, 1);
+  const dLen = Math.max(st_periodD, 1);
 
   const avgArr = new Array(barCount).fill(0);
 
-  for (let idx = 0; idx < barCount; idx++) {
-    let totalScore = 0;
-    for (let x = 0; x < n; x++) {
-      const len = a + x;
+  for (let x = 0; x < n; x++) {
+    const len = a + x;
 
+    // Step 1: Compute raw stochastic for all bars at this length
+    const stochRaw = new Array(barCount).fill(0);
+    for (let idx = 0; idx < barCount; idx++) {
       const lookback = Math.min(len, idx + 1);
       let hh = high[idx];
       let ll = low[idx];
@@ -56,26 +42,61 @@ export function stochForLoopScore(candles, params) {
         ll = Math.min(ll, low[idx - j]);
       }
       const denom = hh - ll;
-      const stochRaw = denom !== 0 ? 100 * (close[idx] - ll) / denom : 0;
-
-      // %K smoothing (SMA over st_smoothK bars) - since st_smoothK=1 in configs, k=stochRaw
-      const k = stochRaw;
-      // %D smoothing (SMA over st_periodD bars) - approximate using recent k values
-      const d = k;
-
-      let T;
-      if (st_scoreBy === 'k > 50') {
-        T = k > 50 ? 1 : -1;
-      } else if (st_scoreBy === 'k > d') {
-        T = k > d ? 1 : -1;
-      } else {
-        T = d > 50 ? 1 : -1;
-      }
-      totalScore += T;
+      stochRaw[idx] = denom !== 0 ? 100 * (close[idx] - ll) / denom : 0;
     }
-    avgArr[idx] = totalScore / n;
+
+    // Step 2: %K smoothing — SMA of stochRaw over kLen bars
+    // Pine uses nz() for out-of-bounds access (treats as 0)
+    const kArr = new Array(barCount).fill(0);
+    for (let idx = 0; idx < barCount; idx++) {
+      let sum = 0;
+      for (let j = 0; j < kLen; j++) {
+        sum += idx - j >= 0 ? stochRaw[idx - j] : 0;
+      }
+      kArr[idx] = sum / kLen;
+    }
+
+    // Step 3: %D smoothing — SMA of %K over dLen bars
+    // Pine uses nz() for out-of-bounds access (treats as 0)
+    const dArr = new Array(barCount).fill(0);
+    for (let idx = 0; idx < barCount; idx++) {
+      let sum = 0;
+      for (let j = 0; j < dLen; j++) {
+        sum += idx - j >= 0 ? kArr[idx - j] : 0;
+      }
+      dArr[idx] = sum / dLen;
+    }
+
+    // Step 4: Score each bar and accumulate into avgArr
+    // Pine: T starts at 0.0 per bar, carries over within the for loop
+    // if neither condition fires. In practice k/d rarely equals exactly 50.
+    for (let idx = 0; idx < barCount; idx++) {
+      const k = kArr[idx];
+      const d = dArr[idx];
+
+      let T = 0;
+      if (st_scoreBy === 'k > 50') {
+        if (k > 50) T = 1;
+        if (k < 50) T = -1;
+      } else if (st_scoreBy === 'k > d') {
+        if (k > d) T = 1;
+        if (k < d) T = -1;
+      } else {
+        if (d > 50) T = 1;
+        if (d < 50) T = -1;
+      }
+
+      const trend = T === 1 ? 1 : -1;
+      avgArr[idx] += trend;
+    }
   }
 
+  // Compute average score across all stochastic lengths
+  for (let idx = 0; idx < barCount; idx++) {
+    avgArr[idx] /= n;
+  }
+
+  // Apply MA smoothing to the averaged scores
   let maArr;
   switch (st_maType) {
     case 'SMA': maArr = sma(avgArr, st_maLen); break;
@@ -86,6 +107,7 @@ export function stochForLoopScore(candles, params) {
     default: maArr = ema(avgArr, st_maLen); break;
   }
 
+  // Generate signals from MA
   const scores = new Array(barCount).fill(0);
   const lastChanged = new Array(barCount).fill(NaN);
   let state = 0;

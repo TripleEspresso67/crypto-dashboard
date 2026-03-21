@@ -1,10 +1,12 @@
-import { rsiScore } from '../indicators/rsi.js';
-import { rsiMomentumTrendScore } from '../indicators/rsiMomentumTrend.js';
-import { impulsiveMomentumScore } from '../indicators/impulsiveMomentum.js';
-import { sdZeroLagScore } from '../indicators/sdZeroLag.js';
-import { dpsdScore } from '../indicators/dpsd.js';
-import { stochForLoopScore } from '../indicators/stochForLoop.js';
-import { smartVolSuperTrendScore } from '../indicators/smartVolSuperTrend.js';
+import {
+  rsiScore,
+  impulsiveMomentumScore,
+  sdZeroLagScore,
+  dpsdScore,
+  rsiMomentumTrendScore,
+  stochForLoopScore,
+  smartVolSuperTrendScore,
+} from '../indicators/mttiOthers.js';
 import { qpoScore } from '../indicators/qpo.js';
 import { fsvzoScore } from '../indicators/fsvzo.js';
 import { madForLoopScore } from '../indicators/madForLoop.js';
