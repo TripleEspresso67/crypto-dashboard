@@ -75,32 +75,25 @@ export function runBacktest(candles, compositeScores, longThresh = 0.1, shortThr
   const grossLoss = Math.abs(trades.filter(t => t.pnl < 0).reduce((s, t) => s + t.pnl, 0));
   const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
 
-  const eqReturns = [];
-  for (let i = 1; i < equity.length; i++) {
-    if (equity[i - 1].value > 0) {
-      eqReturns.push(equity[i].value / equity[i - 1].value - 1);
-    }
-  }
-
   let sharpe = NaN;
   let sortino = NaN;
   let omega = NaN;
 
-  if (eqReturns.length >= 2) {
-    const mean = eqReturns.reduce((s, v) => s + v, 0) / eqReturns.length;
-    const variance = eqReturns.reduce((s, v) => s + (v - mean) ** 2, 0) / (eqReturns.length - 1);
+  const tradePnls = trades.map(t => t.pnlPct / 100);
+  if (tradePnls.length >= 2) {
+    const mean = tradePnls.reduce((s, v) => s + v, 0) / tradePnls.length;
+    const variance = tradePnls.reduce((s, v) => s + (v - mean) ** 2, 0) / (tradePnls.length - 1);
     const std = Math.sqrt(variance);
-    sharpe = std > 0 ? (mean / std) * Math.sqrt(365) : 0;
+    sharpe = std > 0 ? mean / std : 0;
 
-    const downSquared = eqReturns.filter(r => r < 0).map(r => r * r);
-    const downsideDev = downSquared.length > 0
-      ? Math.sqrt(downSquared.reduce((s, v) => s + v, 0) / eqReturns.length)
-      : 0;
-    sortino = downsideDev > 0 ? (mean / downsideDev) * Math.sqrt(365) : (mean > 0 ? Infinity : 0);
+    const downsideDev = Math.sqrt(
+      tradePnls.reduce((s, r) => s + (r < 0 ? r * r : 0), 0) / tradePnls.length
+    );
+    sortino = downsideDev > 0 ? mean / downsideDev : (mean > 0 ? Infinity : 0);
 
     let gains = 0;
     let lossSum = 0;
-    for (const r of eqReturns) {
+    for (const r of tradePnls) {
       if (r > 0) gains += r;
       else lossSum += -r;
     }
