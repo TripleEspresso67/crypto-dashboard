@@ -49,6 +49,20 @@ export default function RatioDetail({ ratioData, loading }) {
     );
   }, [pair, backtestStart]);
 
+  const buyHoldEquity = useMemo(() => {
+    if (!pair) return null;
+    const candles = pair.candles;
+    const startIdx = candles.findIndex(c => c.time >= backtestStart);
+    if (startIdx === -1) return [];
+    const firstClose = candles[startIdx].close;
+    if (firstClose === 0) return [];
+    const initialCapital = 1000;
+    return candles.slice(startIdx).map(c => ({
+      time: c.time,
+      value: initialCapital * (c.close / firstClose),
+    }));
+  }, [pair, backtestStart]);
+
   if (loading) {
     return (
       <div className="loading">
@@ -91,7 +105,7 @@ export default function RatioDetail({ ratioData, loading }) {
         <div>
           <h2>{pair.label} Ratio</h2>
           <span className="composite-score" style={{ fontSize: '1rem' }}>
-            Composite Score: {lastScore.toFixed(3)} &mdash;{' '}
+            Composite Score: {lastScore.toFixed(2)} &mdash;{' '}
             <span className={`signal-badge ${lastSignal.toLowerCase()}`}>
               {lastSignal}
             </span>
@@ -168,7 +182,7 @@ export default function RatioDetail({ ratioData, loading }) {
 
       <div className="section">
         <h3 className="section-title">Equity Curve</h3>
-        <EquityCurve equity={recomputedBacktest?.equity} />
+        <EquityCurve equity={recomputedBacktest?.equity} buyHoldEquity={buyHoldEquity} />
       </div>
 
       <div className="section">

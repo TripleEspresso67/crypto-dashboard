@@ -65,7 +65,7 @@ export default function Overview({ assetData, ratioData, loading, error }) {
                 <div className="price">{formatPrice(lastCandle.close)}</div>
                 <div className="score-row">
                   <span className="composite-score">
-                    Score: {lastScore.toFixed(3)}
+                    Score: {lastScore.toFixed(2)}
                   </span>
                   <span className={`signal-badge ${lastSignal.toLowerCase()}`}>
                     {lastSignal}

@@ -13,9 +13,9 @@ export default function RatiosTable({ ratioData }) {
       wins: d.wins,
       losses: d.losses,
       neutral: d.neutral,
-      aggScore: d.score,
+      score: d.wins - d.losses,
     }))
-    .sort((a, b) => b.aggScore - a.aggScore);
+    .sort((a, b) => b.score - a.score);
 
   const topAsset = dominanceList[0];
 
@@ -59,7 +59,7 @@ export default function RatiosTable({ ratioData }) {
           </span>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
             <div>Outperforming {topAsset.wins} pairs, underperforming {topAsset.losses}</div>
-            <div>Aggregate score: {topAsset.aggScore.toFixed(3)}</div>
+            <div>Score: {topAsset.score}</div>
           </div>
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function RatiosTable({ ratioData }) {
               <th>Outperforming</th>
               <th>Underperforming</th>
               <th>Neutral</th>
-              <th>Agg. Score</th>
+              <th>Score</th>
             </tr>
           </thead>
           <tbody>
@@ -92,10 +92,10 @@ export default function RatiosTable({ ratioData }) {
                   <span className="score-cell zero">{d.neutral}</span>
                 </td>
                 <td style={{
-                  color: d.aggScore > 0 ? 'var(--green)' : d.aggScore < 0 ? 'var(--red)' : 'var(--text-secondary)',
+                  color: '#ffffff',
                   fontWeight: 600
                 }}>
-                  {d.aggScore > 0 ? '+' : ''}{d.aggScore.toFixed(3)}
+                  {d.score > 0 ? '+' : ''}{d.score}
                 </td>
               </tr>
             ))}
@@ -136,7 +136,7 @@ export default function RatiosTable({ ratioData }) {
                         color: p.score > 0 ? 'var(--green)' : p.score < 0 ? 'var(--red)' : 'var(--text-secondary)',
                         fontWeight: 600
                       }}>
-                        {p.score > 0 ? '+' : ''}{p.score.toFixed(3)}
+                        {p.score > 0 ? '+' : ''}{p.score.toFixed(2)}
                       </td>
                       <td>
                         <span className={`signal-badge ${signalClass(p.signal)}`}>

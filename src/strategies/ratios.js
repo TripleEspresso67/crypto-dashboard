@@ -104,14 +104,10 @@ export function computeRatios(assetCandlesMap) {
   const pairs = [];
 
   for (let i = 0; i < names.length; i++) {
-    for (let j = i + 1; j < names.length; j++) {
-      const a = names[i];
-      const b = names[j];
-
-      const volA = volatilities[a];
-      const volB = volatilities[b];
-      const numerator = volA >= volB ? a : b;
-      const denominator = volA >= volB ? b : a;
+    for (let j = 0; j < names.length; j++) {
+      if (i === j) continue;
+      const numerator = names[i];
+      const denominator = names[j];
 
       const ratioCandles = buildRatioCandles(
         assetCandlesMap[numerator],
@@ -136,8 +132,8 @@ export function computeRatios(assetCandlesMap) {
           label: `${numerator}/${denominator}`,
           score: lastScore,
           signal: lastSignal,
-          volNumerator: volA >= volB ? volA : volB,
-          volDenominator: volA >= volB ? volB : volA,
+          volNumerator: volatilities[numerator],
+          volDenominator: volatilities[denominator],
           sharpe,
           sortino,
           omega,
@@ -147,7 +143,7 @@ export function computeRatios(assetCandlesMap) {
           indicatorResults,
         });
       } catch (err) {
-        console.warn(`Ratio ${a}/${b} failed: ${err.message}`);
+        console.warn(`Ratio ${numerator}/${denominator} failed: ${err.message}`);
       }
     }
   }
