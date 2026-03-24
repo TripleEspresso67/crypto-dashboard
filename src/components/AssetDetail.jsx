@@ -151,6 +151,8 @@ export default function AssetDetail({ assetData, loading }) {
           candles={asset.candles}
           signals={recomputedSignals}
           backtestStart={backtestStart}
+          indicatorResults={asset.indicatorResults}
+          compositeScores={asset.compositeScores}
         />
       </div>
 

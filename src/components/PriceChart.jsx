@@ -55,13 +55,38 @@ function buildMarkers(candles, signals, backtestStart) {
   return markers;
 }
 
-export default function PriceChart({ candles, signals, backtestStart = DEFAULT_BACKTEST_START }) {
+export default function PriceChart({
+  candles, signals, backtestStart = DEFAULT_BACKTEST_START,
+  indicatorResults, compositeScores,
+}) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
   const markersRef = useRef(null);
   const prevBacktestStartRef = useRef(backtestStart);
   const hasInitialFit = useRef(false);
+  const scoreBarRef = useRef(null);
+  const timeIndexMapRef = useRef(new Map());
+  const indicatorResultsRef = useRef(indicatorResults);
+  const compositeScoresRef = useRef(compositeScores);
+  const candlesRef = useRef(candles);
+
+  function updateScoreBar(barIndex) {
+    if (!scoreBarRef.current) return;
+    const ir = indicatorResultsRef.current;
+    const cs = compositeScoresRef.current;
+    if (!ir || !cs || barIndex === null || barIndex === undefined || barIndex < 0) {
+      scoreBarRef.current.textContent = '';
+      return;
+    }
+    const parts = ir.map(r => {
+      const s = r.scores[barIndex];
+      return `${r.name}: ${Number.isNaN(s) ? '–' : s.toFixed(0)}`;
+    });
+    const comp = cs[barIndex];
+    parts.push(`Composite: ${Number.isNaN(comp) ? '–' : comp.toFixed(2)}`);
+    scoreBarRef.current.textContent = parts.join('  ·  ');
+  }
 
   const resetView = useCallback(() => {
     chartRef.current?.timeScale().fitContent();
@@ -91,6 +116,16 @@ export default function PriceChart({ candles, signals, backtestStart = DEFAULT_B
       wickUpColor: NEUTRAL_COLOR,
       wickDownColor: NEUTRAL_COLOR,
       borderVisible: false,
+    });
+
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.point) {
+        const cndls = candlesRef.current;
+        if (cndls) updateScoreBar(cndls.length - 1);
+        return;
+      }
+      const idx = timeIndexMapRef.current.get(param.time);
+      if (idx !== undefined) updateScoreBar(idx);
     });
 
     chartRef.current = chart;
@@ -143,6 +178,20 @@ export default function PriceChart({ candles, signals, backtestStart = DEFAULT_B
   }, [candles, signals, backtestStart]);
 
   useEffect(() => {
+    indicatorResultsRef.current = indicatorResults;
+    compositeScoresRef.current = compositeScores;
+    candlesRef.current = candles;
+
+    timeIndexMapRef.current.clear();
+    if (candles) {
+      for (let i = 0; i < candles.length; i++) {
+        timeIndexMapRef.current.set(candles[i].time / 1000, i);
+      }
+      updateScoreBar(candles.length - 1);
+    }
+  }, [candles, indicatorResults, compositeScores]);
+
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -156,6 +205,19 @@ export default function PriceChart({ candles, signals, backtestStart = DEFAULT_B
   return (
     <div style={{ position: 'relative' }}>
       <div ref={containerRef} className="chart-container" />
+      <div
+        ref={scoreBarRef}
+        style={{
+          fontSize: '0.68rem',
+          color: '#6e7681',
+          padding: '4px 8px',
+          minHeight: '1.4em',
+          fontFamily: 'monospace',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      />
       <button
         onClick={resetView}
         className="reset-view-btn"

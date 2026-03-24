@@ -128,6 +128,8 @@ export default function RatioDetail({ ratioData, loading }) {
           candles={pair.candles}
           signals={pair.signals}
           backtestStart={backtestStart}
+          indicatorResults={pair.indicatorResults}
+          compositeScores={pair.compositeScores}
         />
       </div>
 

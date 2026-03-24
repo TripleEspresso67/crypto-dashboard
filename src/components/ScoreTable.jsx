@@ -21,20 +21,12 @@ export default function ScoreTable({ indicatorResults, candles }) {
         <tr>
           <th>Indicator</th>
           <th>Score</th>
-          <th>Prior</th>
           <th>Last Change</th>
         </tr>
       </thead>
       <tbody>
         {indicatorResults.map(r => {
           const current = r.scores[lastIdx];
-          let prior = '--';
-          for (let i = lastIdx - 1; i >= 0; i--) {
-            if (r.scores[i] !== current) {
-              prior = r.scores[i];
-              break;
-            }
-          }
           return (
             <tr key={r.key}>
               <td>{r.name}</td>
@@ -42,13 +34,6 @@ export default function ScoreTable({ indicatorResults, candles }) {
                 <span className={`score-cell ${scoreClass(current)}`}>
                   {current > 0 ? '+1' : current < 0 ? '-1' : '0'}
                 </span>
-              </td>
-              <td>
-                {prior !== '--' ? (
-                  <span className={`score-cell ${scoreClass(prior)}`}>
-                    {prior > 0 ? '+1' : prior < 0 ? '-1' : '0'}
-                  </span>
-                ) : '--'}
               </td>
               <td>{formatDate(r.lastChanged[lastIdx])}</td>
             </tr>
