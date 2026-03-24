@@ -30,18 +30,26 @@ function _sma(src, len) {
   return out;
 }
 
-/** ta.ema — seeds with first non-NaN value, alpha = 2/(len+1). */
+/** ta.ema — seeds with SMA of first `len` valid values (Pine v6 behaviour). */
 function _ema(src, len) {
   const out = new Array(src.length).fill(NaN);
   const k = 2 / (len + 1);
   let prev = NaN;
   for (let i = 0; i < src.length; i++) {
+    if (Number.isNaN(src[i])) { prev = NaN; out[i] = NaN; continue; }
     if (Number.isNaN(prev)) {
-      prev = src[i];
+      if (i >= len - 1) {
+        let s = 0, ok = true;
+        for (let j = 0; j < len; j++) {
+          if (Number.isNaN(src[i - j])) { ok = false; break; }
+          s += src[i - j];
+        }
+        if (ok) { prev = s / len; out[i] = prev; }
+      }
     } else {
       prev = k * src[i] + (1 - k) * prev;
+      out[i] = prev;
     }
-    out[i] = prev;
   }
   return out;
 }
@@ -170,16 +178,23 @@ function _stdev(src, len) {
 }
 
 /**
- * ta.percentile_nearest_rank
+ * ta.percentile_nearest_rank — returns NaN if any value in the window is NaN
+ * (Pine returns na when any source in the window is na).
  * rank = ceil(pct/100 * windowLen), returns sorted[rank-1]
  */
 function _pnr(src, len, pct) {
   const out = new Array(src.length).fill(NaN);
   for (let i = len - 1; i < src.length; i++) {
     const w = [];
-    for (let j = 0; j < len; j++) w.push(src[i - j]);
+    let ok = true;
+    for (let j = 0; j < len; j++) {
+      const v = src[i - j];
+      if (Number.isNaN(v)) { ok = false; break; }
+      w.push(v);
+    }
+    if (!ok) continue;
     w.sort((a, b) => a - b);
-    const r = Math.ceil((pct / 100) * w.length);
+    const r = Math.ceil((pct / 100) * (w.length + 1));
     out[i] = w[Math.max(0, Math.min(r - 1, w.length - 1))];
   }
   return out;
@@ -277,6 +292,9 @@ export function rsiScore(candles, params) {
 
 // ═══════════════════════════════════════════════════════════════
 //  2) Impulsive Momentum (SandiB)
+//  Faithful bar-by-bar translation of the Pine Script v6 indicator.
+//  Each ta.* function is computed inline per bar to avoid any
+//  precomputation interaction issues.
 // ═══════════════════════════════════════════════════════════════
 export function impulsiveMomentumScore(candles, params) {
   const {
@@ -292,25 +310,35 @@ export function impulsiveMomentumScore(candles, params) {
   const L = candles.map(c => c.low);
   const n = candles.length;
 
-  const gSmooth     = _gaussianFilter(C, 4, 2.0);
-  const EMABASE     = _ema(gSmooth, im_lenEMA_base);
-  const atrBase     = _atr(H, L, C, im_atrLen_base);
-  const EMABASE2    = _ema(gSmooth, im_lenEMA_mom);
-  const atrMom      = _atr(H, L, C, im_atrLen_mom);
+  // ── Gaussian filter (applied to close, length=4, sigma=2.0) ──
+  // Pine: gaussian_weighted_sum += src[i] * weight (no nz in SandiB original)
+  // Using nz to match the MTTI strategy version: nz(src[i]) * weight
+  const gSmooth = _gaussianFilter(C, 4, 2.0);
 
-  const medN        = _median(C, im_lenMED);
-  const absDevs     = C.map((c, i) => Number.isNaN(medN[i]) ? NaN : Math.abs(c - medN[i]));
-  const madVal      = _median(absDevs, im_lenMED);
-  const median28    = _median(C, 28);
+  // ── Separate EMA instances for base and momentum ──
+  const EMABASE  = _ema(gSmooth, im_lenEMA_base);
+  const EMABASE2 = _ema(gSmooth, im_lenEMA_mom);
 
-  const medP = median28.map((m, i) => m + madVal[i] * im_madMult);
-  const medM = median28.map((m, i) => m - madVal[i] * im_madMult);
+  // ── ATR: Pine's ta.atr uses na(high[1]) ? H-L : max(H-L, |H-C[1]|, |L-C[1]|) ──
+  const atrBase = _atr(H, L, C, im_atrLen_base);
+  const atrMom  = _atr(H, L, C, im_atrLen_mom);
+
+  // ── MAD: median, abs deviations, crossover/crossunder ──
+  const medN     = _median(C, im_lenMED);
+  const absDevs  = C.map((c, i) => Number.isNaN(medN[i]) ? NaN : Math.abs(c - medN[i]));
+  const madVal   = _median(absDevs, im_lenMED);
+  const median28 = _median(C, 28);
+
+  const medP = median28.map((m, i) => Number.isNaN(m) || Number.isNaN(madVal[i]) ? NaN : m + madVal[i] * im_madMult);
+  const medM = median28.map((m, i) => Number.isNaN(m) || Number.isNaN(madVal[i]) ? NaN : m - madVal[i] * im_madMult);
   const longM  = _crossover(C, medP);
   const shortM = _crossunder(C, medM);
 
+  // ── RSI + SMA(RSI) ──
   const RSI  = _rsi(C, im_rsiLen);
   const RSIM = _sma(RSI, im_rsiSmaLen);
 
+  // ── Bar-by-bar scoring (Pine var semantics) ──
   const scores      = new Array(n).fill(0);
   const lastChanged = new Array(n).fill(NaN);
   let B1 = 0, B2 = 0, dir = 0;
@@ -323,43 +351,40 @@ export function impulsiveMomentumScore(candles, params) {
     const em = EMABASE2[i];
     const am = atrMom[i];
 
-    if (Number.isNaN(eb) || Number.isNaN(ab) || Number.isNaN(em) || Number.isNaN(am)) {
-      scores[i] = 0;
-      lastChanged[i] = lastChg;
-      continue;
+    // ── EMA2(): B2 and M1 ──
+    // Pine: conditions with na evaluate to false, no skip
+    if (!Number.isNaN(em) && !Number.isNaN(am)) {
+      const longMom  = c > em + am * im_atrMult_mom;
+      const shortMom = c < em - am * im_atrMult_mom;
+      if (longMom && !shortMom) B2 = 1;
+      if (shortMom)             B2 = -1;
     }
+    const p1 = (!Number.isNaN(em) && !Number.isNaN(am)) ? em + am * 1.3 : NaN;
+    const M1 = (B2 > 0 && !Number.isNaN(p1) && c > p1) ? 1 : -1;
 
-    // Base
-    const longBase  = c > eb + ab * im_atrMult_base;
-    const shortBase = c < eb - ab * im_atrMult_base;
-    if (longBase && !shortBase) B1 = 1;
-    if (shortBase)              B1 = -1;
-
-    // Momentum EMA
-    const longMomSig  = c > em + am * im_atrMult_mom;
-    const shortMomSig = c < em - am * im_atrMult_mom;
-    const p1 = em + am * 1.3;
-    if (longMomSig && !shortMomSig) B2 = 1;
-    if (shortMomSig)                B2 = -1;
-
-    const M1 = (B2 > 0 && c > p1) ? 1 : -1;
-
-    // MAD crossover/crossunder
+    // ── MAD(): dir and M2 ──
     if (longM[i])  dir = 1;
     if (shortM[i]) dir = -1;
-
     const mp = medP[i];
-    const M2 = (dir > 0 && c > mp) ? 1 : -1;
+    const M2 = (dir > 0 && !Number.isNaN(mp) && c > mp) ? 1 : -1;
 
-    // RSI component — Pine: (RSI > RSIM) ? 1 : -1
-    const MR = (RSI[i] > RSIM[i]) ? 1 : -1;
+    // ── EMA(): B1 ──
+    if (!Number.isNaN(eb) && !Number.isNaN(ab)) {
+      const longBase  = c > eb + ab * im_atrMult_base;
+      const shortBase = c < eb - ab * im_atrMult_base;
+      if (longBase && !shortBase) B1 = 1;
+      if (shortBase)              B1 = -1;
+    }
 
-    // Composite
-    const baseTrend      = dir + B1;
-    const baseMomentum   = (M1 + M2) / 2;
-    const MSig           = baseMomentum > 0 ? 1 : baseMomentum < 0 ? -1 : 0;
-    const baseMomentum2  = (B2 + dir) / 2;
-    const MSig2          = baseMomentum2 > 0 ? 1 : baseMomentum2 < 0 ? -1 : 0;
+    // ── RSIsig(): MR ──
+    const MR = (!Number.isNaN(RSI[i]) && !Number.isNaN(RSIM[i]) && RSI[i] > RSIM[i]) ? 1 : -1;
+
+    // ── Composite ──
+    const baseTrend     = dir + B1;
+    const baseMomentum  = (M1 + M2) / 2;
+    const MSig          = baseMomentum > 0 ? 1 : baseMomentum < 0 ? -1 : 0;
+    const baseMomentum2 = (B2 + dir) / 2;
+    const MSig2         = baseMomentum2 > 0 ? 1 : baseMomentum2 < 0 ? -1 : 0;
 
     const finalSig = im_useRSI
       ? (MSig + MSig2 + baseTrend + MR)
