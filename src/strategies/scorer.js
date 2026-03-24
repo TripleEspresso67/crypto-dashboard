@@ -54,9 +54,17 @@ export function runStrategy(candles, strategyParams) {
     compositeScores[i] = sum / indicatorCount;
   }
 
-  const signals = compositeScores.map(s =>
-    s >= longThresh ? 'LONG' : s <= shortThresh ? 'CASH' : 'NEUTRAL'
-  );
+  const signals = new Array(candles.length).fill('CASH');
+  for (let i = 0; i < candles.length; i++) {
+    const s = compositeScores[i];
+    if (s >= longThresh) {
+      signals[i] = 'LONG';
+    } else if (s <= shortThresh) {
+      signals[i] = 'CASH';
+    } else {
+      signals[i] = i > 0 ? signals[i - 1] : 'CASH';
+    }
+  }
 
   return { indicatorResults, compositeScores, signals };
 }

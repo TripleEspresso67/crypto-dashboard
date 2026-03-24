@@ -39,23 +39,40 @@ export default function AssetDetail({ assetData, loading }) {
   const defaultDateStr = toDateStr(DEFAULT_BACKTEST_START);
   const [selectedPreset, setSelectedPreset] = useState(defaultDateStr);
   const [customDate, setCustomDate] = useState(defaultDateStr);
+  const [longThreshStr, setLongThreshStr] = useState(null);
+  const [shortThreshStr, setShortThreshStr] = useState(null);
 
   const activeDateStr = selectedPreset === 'custom' ? customDate : selectedPreset;
   const backtestStart = new Date(activeDateStr + 'T00:00:00Z').getTime();
 
   const asset = assetData?.[idx] ?? null;
+  const stratParams = asset ? STRATEGY_PARAMS[asset.config.strategy] : null;
+
+  const longThresh = longThreshStr !== null ? parseFloat(longThreshStr) : (stratParams?.longThresh ?? 0.1);
+  const shortThresh = shortThreshStr !== null ? parseFloat(shortThreshStr) : (stratParams?.shortThresh ?? -0.1);
+
+  const recomputedSignals = useMemo(() => {
+    if (!asset) return null;
+    const signals = new Array(asset.compositeScores.length).fill('CASH');
+    for (let i = 0; i < asset.compositeScores.length; i++) {
+      const s = asset.compositeScores[i];
+      if (s >= longThresh) signals[i] = 'LONG';
+      else if (s <= shortThresh) signals[i] = 'CASH';
+      else signals[i] = i > 0 ? signals[i - 1] : 'CASH';
+    }
+    return signals;
+  }, [asset, longThresh, shortThresh]);
 
   const recomputedBacktest = useMemo(() => {
     if (!asset) return null;
-    const stratParams = STRATEGY_PARAMS[asset.config.strategy];
     return runBacktest(
       asset.candles,
       asset.compositeScores,
-      stratParams.longThresh,
-      stratParams.shortThresh,
+      longThresh,
+      shortThresh,
       backtestStart
     );
-  }, [asset, backtestStart]);
+  }, [asset, backtestStart, longThresh, shortThresh]);
 
   const buyHoldEquity = useMemo(() => {
     if (!asset) return null;
@@ -93,7 +110,7 @@ export default function AssetDetail({ assetData, loading }) {
 
   const lastCandle = asset.candles[asset.candles.length - 1];
   const lastScore = asset.compositeScores[asset.compositeScores.length - 1];
-  const lastSignal = asset.signals[asset.signals.length - 1];
+  const lastSignal = recomputedSignals[recomputedSignals.length - 1];
 
   function formatPrice(p) {
     if (p >= 1000) return `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -132,7 +149,7 @@ export default function AssetDetail({ assetData, loading }) {
         <h3 className="section-title">Price Chart</h3>
         <PriceChart
           candles={asset.candles}
-          signals={asset.signals}
+          signals={recomputedSignals}
           backtestStart={backtestStart}
         />
       </div>
@@ -150,35 +167,63 @@ export default function AssetDetail({ assetData, loading }) {
           <h3 className="section-title" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>
             Backtest Performance
           </h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Backtest from:
-            </label>
-            <select
-              value={selectedPreset}
-              onChange={handlePresetChange}
-              style={{
-                padding: '5px 10px', fontSize: '0.8rem',
-                background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                border: '1px solid var(--border)', borderRadius: 4,
-              }}
-            >
-              {DATE_PRESETS.map(p => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
-            {selectedPreset === 'custom' && (
-              <input
-                type="date"
-                value={customDate}
-                onChange={e => setCustomDate(e.target.value)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Backtest from:
+              </label>
+              <select
+                value={selectedPreset}
+                onChange={handlePresetChange}
                 style={{
                   padding: '5px 10px', fontSize: '0.8rem',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   border: '1px solid var(--border)', borderRadius: 4,
                 }}
+              >
+                {DATE_PRESETS.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+              {selectedPreset === 'custom' && (
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={e => setCustomDate(e.target.value)}
+                  style={{
+                    padding: '5px 10px', fontSize: '0.8rem',
+                    background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                    border: '1px solid var(--border)', borderRadius: 4,
+                  }}
+                />
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Long:</label>
+              <input
+                type="number"
+                step="0.01"
+                value={longThreshStr !== null ? longThreshStr : stratParams.longThresh}
+                onChange={e => setLongThreshStr(e.target.value)}
+                style={{
+                  width: 65, padding: '5px 8px', fontSize: '0.8rem',
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  border: '1px solid var(--border)', borderRadius: 4,
+                }}
               />
-            )}
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Short:</label>
+              <input
+                type="number"
+                step="0.01"
+                value={shortThreshStr !== null ? shortThreshStr : stratParams.shortThresh}
+                onChange={e => setShortThreshStr(e.target.value)}
+                style={{
+                  width: 65, padding: '5px 8px', fontSize: '0.8rem',
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  border: '1px solid var(--border)', borderRadius: 4,
+                }}
+              />
+            </div>
           </div>
         </div>
         <div style={{ marginTop: 12 }}>

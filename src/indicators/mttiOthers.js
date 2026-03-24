@@ -628,6 +628,7 @@ export function stochForLoopScore(candles, params) {
     dArrays.push(dArr);
   }
 
+
   // Per-bar scoring: T carries across lengths within a bar (Pine behaviour)
   const avgArr = new Array(barCount).fill(0);
   for (let idx = 0; idx < barCount; idx++) {
@@ -705,6 +706,7 @@ export function stochForLoopScore(candles, params) {
     if (i > 0 && s !== scores[i - 1]) lastChg = candles[i].time;
     scores[i] = s;
     lastChanged[i] = lastChg;
+
   }
 
   return { scores, lastChanged, name: 'STOCH ForLoop' };
