@@ -13,10 +13,10 @@ export const MTTI_BTC_PARAMS = {
   },
   sdZeroLag: {
     sd_len: 12, sd_type: 'zldema', sd_sdLength: 27,
-    sd_upperSd: 1.036, sd_lowerSd: 0.982
+    sd_upperSd: 1.036, sd_lowerSd: 0.982, sd_src: 'close'
   },
   dpsd: {
-    dpsd_DemaLen: 24, dpsd_DemaSrc: 'open',
+    dpsd_DemaLen: 24, dpsd_DemaSrc: 'close',
     dpsd_PerLen: 32, dpsd_perUp: 60, dpsd_perDown: 40,
     dpsd_SDlen: 27, dpsd_EmaLen: 25
   },
@@ -26,7 +26,7 @@ export const MTTI_BTC_PARAMS = {
     st_a: 20, st_b: 35, st_maType: 'EMA', st_maLen: 9,
     st_sigmode: 'Fast', st_longth: 0.0, st_shortth: -0.6, st_fastth: 0.1
   },
-  smartVolSuperTrend: { sv_emalen: 5, sv_vwsdlen: 30, sv_factor: 1.8 },
+  smartVolSuperTrend: { sv_emalen: 5, sv_vwsdlen: 30, sv_factor: 1.8, sv_src: 'close' },
   longThresh: 0.1,
   shortThresh: -0.1,
   indicatorOrder: ['rsi', 'impulsiveMomentum', 'sdZeroLag', 'dpsd', 'rsiMomentumTrend', 'stochForLoop', 'smartVolSuperTrend'],

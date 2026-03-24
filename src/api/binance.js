@@ -166,12 +166,7 @@ export async function fetchAllCandles(symbol, interval, startTime) {
 }
 
 export function getWarmupStart(interval) {
-  const backtestStart = new Date('2023-01-01T00:00:00Z').getTime();
-  const warmupBars = 200;
-  if (interval === '3d') {
-    return backtestStart - warmupBars * 3 * 24 * 60 * 60 * 1000;
-  }
-  return backtestStart - warmupBars * 24 * 60 * 60 * 1000;
+  return new Date('2017-01-01T00:00:00Z').getTime();
 }
 
 export const ASSET_CONFIGS = [

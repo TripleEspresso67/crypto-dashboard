@@ -411,10 +411,12 @@ function _zlagtema(src, len) {
 }
 
 export function sdZeroLagScore(candles, params) {
-  const { sd_len, sd_type, sd_sdLength, sd_upperSd, sd_lowerSd } = params;
+  const { sd_len, sd_type, sd_sdLength, sd_upperSd, sd_lowerSd, sd_src } = params;
 
-  const src   = _hlcc4(candles);
   const close = candles.map(c => c.close);
+  const src = sd_src === 'open' ? candles.map(c => c.open)
+            : sd_src === 'hlcc4' ? candles.map(c => (c.high + c.low + c.close + c.close) / 4)
+            : close;
 
   let zlma;
   if (sd_type === 'zldema')      zlma = _zlagdema(src, sd_len);
@@ -479,7 +481,7 @@ export function dpsdScore(candles, params) {
     dpsd_SDlen
   } = params;
 
-  const src   = candles.map(c => c[dpsd_DemaSrc || 'open']);
+  const src   = candles.map(c => c[dpsd_DemaSrc || 'close']);
   const close = candles.map(c => c.close);
 
   const ema1 = _ema(src, dpsd_DemaLen);
@@ -587,16 +589,23 @@ export function stochForLoopScore(candles, params) {
   const kLen = Math.max(st_smoothK, 1);
   const dLen = Math.max(st_periodD, 1);
 
-  // Pre-compute stochRaw, %K, %D for every length across all bars
-  const kArrays = [];
-  const dArrays = [];
+  // Pine Script for-loop history quirk: variables computed inside a for loop
+  // have their [i] history reference the value from the LAST iteration of the
+  // loop on previous bars, not the same-iteration value. This means D for
+  // shorter lengths uses K values from the longest length (last iteration) on
+  // past bars. We replicate this by tracking stoch_raw and k history as single
+  // per-bar values that get overwritten each iteration (final = last length).
+  const rawHistory = new Array(barCount).fill(0);
+  const kHistory   = new Array(barCount).fill(0);
 
-  for (let x = 0; x < numLens; x++) {
-    const len = a + x;
+  const avgArr = new Array(barCount).fill(0);
+  for (let idx = 0; idx < barCount; idx++) {
+    let T = 0;
+    let trendSum = 0;
 
-    // stochRaw for all bars at this stochastic length
-    const raw = new Array(barCount).fill(0);
-    for (let idx = 0; idx < barCount; idx++) {
+    for (let x = 0; x < numLens; x++) {
+      const len = a + x;
+
       let hh = H[idx], ll = L[idx];
       for (let j = 1; j < len; j++) {
         if (idx - j >= 0) {
@@ -605,39 +614,21 @@ export function stochForLoopScore(candles, params) {
         }
       }
       const denom = hh - ll;
-      raw[idx] = denom !== 0 ? 100 * (C[idx] - ll) / denom : 0;
-    }
+      const stoch_raw = denom !== 0 ? 100 * (C[idx] - ll) / denom : 0;
 
-    // %K = SMA of raw over kLen (using nz = 0 for OOB)
-    const kArr = new Array(barCount).fill(0);
-    for (let idx = 0; idx < barCount; idx++) {
-      let s = 0;
-      for (let j = 0; j < kLen; j++) s += (idx - j >= 0) ? raw[idx - j] : 0;
-      kArr[idx] = s / kLen;
-    }
+      // K = SMA(stoch_raw, kLen) — history references rawHistory (last iteration)
+      let sumK = stoch_raw;
+      for (let i = 1; i < kLen; i++) {
+        sumK += (idx - i >= 0) ? rawHistory[idx - i] : 0;
+      }
+      const k = sumK / kLen;
 
-    // %D = SMA of %K over dLen (using nz = 0 for OOB)
-    const dArr = new Array(barCount).fill(0);
-    for (let idx = 0; idx < barCount; idx++) {
-      let s = 0;
-      for (let j = 0; j < dLen; j++) s += (idx - j >= 0) ? kArr[idx - j] : 0;
-      dArr[idx] = s / dLen;
-    }
-
-    kArrays.push(kArr);
-    dArrays.push(dArr);
-  }
-
-
-  // Per-bar scoring: T carries across lengths within a bar (Pine behaviour)
-  const avgArr = new Array(barCount).fill(0);
-  for (let idx = 0; idx < barCount; idx++) {
-    let T = 0;
-    let trendSum = 0;
-
-    for (let x = 0; x < numLens; x++) {
-      const k = kArrays[x][idx];
-      const d = dArrays[x][idx];
+      // D = SMA(k, dLen) — history references kHistory (last iteration)
+      let sumD = k;
+      for (let i = 1; i < dLen; i++) {
+        sumD += (idx - i >= 0) ? kHistory[idx - i] : 0;
+      }
+      const d = sumD / dLen;
 
       if (st_scoreBy === 'k > 50') {
         if (k > 50) T = 1;
@@ -651,6 +642,10 @@ export function stochForLoopScore(candles, params) {
       }
 
       trendSum += (T === 1) ? 1 : -1;
+
+      // Overwrite history — final value after loop = last iteration (longest length)
+      rawHistory[idx] = stoch_raw;
+      kHistory[idx]   = k;
     }
 
     avgArr[idx] = trendSum / numLens;
@@ -733,11 +728,13 @@ function _volumeWeightedSD(src, vol, length) {
 }
 
 export function smartVolSuperTrendScore(candles, params) {
-  const { sv_emalen, sv_vwsdlen, sv_factor } = params;
+  const { sv_emalen, sv_vwsdlen, sv_factor, sv_src } = params;
 
-  const src   = candles.map(c => c.close);
-  const vol   = candles.map(c => c.volume);
   const close = candles.map(c => c.close);
+  const src = sv_src === 'open' ? candles.map(c => c.open)
+            : sv_src === 'hlcc4' ? candles.map(c => (c.high + c.low + c.close + c.close) / 4)
+            : close;
+  const vol   = candles.map(c => c.volume);
   const n     = candles.length;
 
   const srcEma = _ema(src, sv_emalen);

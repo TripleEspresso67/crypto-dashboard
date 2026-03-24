@@ -5,9 +5,10 @@ function fourierSmooth(src, length) {
   for (let i = 0; i < src.length; i++) {
     let sum = 0;
     let wSum = 0;
-    for (let j = 0; j < length && (i - j) >= 0; j++) {
+    for (let j = 0; j < length; j++) {
       const w = Math.exp(-j / (length * 0.3));
-      sum += nz(src[i - j]) * w;
+      const val = (i - j >= 0) ? nz(src[i - j]) : 0;
+      sum += val * w;
       wSum += w;
     }
     out[i] = wSum > 0 ? sum / wSum : NaN;
@@ -94,7 +95,7 @@ export function fsvzoScore(candles, params) {
     const v = finalVzo[i];
     if (isNaN(v)) { scores[i] = bull ? 1 : -1; lastChanged[i] = lastChg; continue; }
 
-    const vzoRising = i > 0 ? v > nz(finalVzo[i - 1]) : true;
+    const vzoRising = i > 0 ? v > nz(finalVzo[i - 1]) : false;
     const prevRising = i > 1 ? nz(finalVzo[i - 1]) > nz(finalVzo[i - 2]) : false;
 
     const flipBull = vzoRising && !prevRising;

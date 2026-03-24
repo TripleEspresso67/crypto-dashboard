@@ -11,7 +11,7 @@ export function qpoScore(candles, params) {
   const high = candles.map(c => c.high);
   const low = candles.map(c => c.low);
 
-  const delta = close.map((c, i) => i === 0 ? 0 : c - close[i - 1]);
+  const delta = close.map((c, i) => i === 0 ? NaN : c - close[i - 1]);
   const prob = delta.map(d => 1 / (1 + Math.abs(d)));
   const probSmooth = sma(prob, qpo_smooth);
   const trend = sma(delta, qpo_smooth);
