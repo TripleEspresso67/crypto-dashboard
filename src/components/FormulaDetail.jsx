@@ -83,8 +83,6 @@ export default function FormulaDetail({ assetData, ratioData, loading }) {
     if (val !== 'custom') setCustomDate(val);
   }
 
-  const isBest = key === data.bestFormulaKey;
-
   return (
     <div className="detail-page">
       <span className="back-link" onClick={() => navigate('/')}>
@@ -93,14 +91,7 @@ export default function FormulaDetail({ assetData, ratioData, loading }) {
 
       <div className="detail-header">
         <div>
-          <h2>
-            Formula {key}
-            {isBest && (
-              <span style={{ fontSize: '0.75rem', color: '#58a6ff', marginLeft: 10 }}>
-                BEST OMEGA
-              </span>
-            )}
-          </h2>
+          <h2>Formula {key}</h2>
           <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
             {formulaInfo.label}
           </span>

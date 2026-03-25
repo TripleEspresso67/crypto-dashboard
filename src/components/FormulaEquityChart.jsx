@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { createChart, LineSeries } from 'lightweight-charts';
 
-const FORMULA_COLORS = {
+export const FORMULA_COLORS = {
   A: '#58a6ff',
   B: '#f78166',
   C: '#7ee787',

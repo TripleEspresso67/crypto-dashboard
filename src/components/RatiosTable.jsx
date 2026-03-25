@@ -105,9 +105,9 @@ export default function RatiosTable({ ratioData }) {
 
       <div className="section">
         <h3 className="section-title">All Pair Ratios (MTTI-others)</h3>
-        <div className="trade-list-container">
+        <div className="trade-list-container" style={{ maxHeight: 330, overflowY: 'auto' }}>
           <table className="trade-table">
-            <thead>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
               <tr>
                 <th>Pair</th>
                 <th>Score</th>
@@ -132,10 +132,7 @@ export default function RatiosTable({ ratioData }) {
                     return (
                     <tr key={p.label} onClick={() => navigate(`/ratio/${idx}`)} style={{ cursor: 'pointer' }}>
                       <td style={{ fontWeight: 600 }}>{p.label}</td>
-                      <td style={{
-                        color: p.score > 0 ? 'var(--green)' : p.score < 0 ? 'var(--red)' : 'var(--text-secondary)',
-                        fontWeight: 600
-                      }}>
+                      <td style={{ fontWeight: 600 }}>
                         {p.score > 0 ? '+' : ''}{p.score.toFixed(2)}
                       </td>
                       <td>
@@ -143,13 +140,13 @@ export default function RatiosTable({ ratioData }) {
                           {p.signal}
                         </span>
                       </td>
-                      <td style={{ color: ratioColor(p.sharpe), fontWeight: 600 }}>
+                      <td style={{ fontWeight: 600 }}>
                         {formatRatio(p.sharpe)}
                       </td>
-                      <td style={{ color: ratioColor(p.sortino), fontWeight: 600 }}>
+                      <td style={{ fontWeight: 600 }}>
                         {formatRatio(p.sortino)}
                       </td>
-                      <td style={{ color: omegaColor(p.omega), fontWeight: 600 }}>
+                      <td style={{ fontWeight: 600 }}>
                         {formatRatio(p.omega)}
                       </td>
                       <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>

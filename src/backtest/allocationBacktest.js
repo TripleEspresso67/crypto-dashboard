@@ -368,13 +368,6 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = ALL
     return { formula: f, label: formulaLabel(f), ...result };
   });
 
-  let bestIdx = 0;
-  for (let i = 1; i < formulaResults.length; i++) {
-    const curr = parseSortino(formulaResults[i].stats.omega);
-    const best = parseSortino(formulaResults[bestIdx].stats.omega);
-    if (curr > best) bestIdx = i;
-  }
-
   const assetNames = mttiAssets.map(a => a.config.name);
 
   const formulaDetailsMap = {};
@@ -399,16 +392,44 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = ALL
     };
   }
 
+  const comparison = formulaResults.map(r => ({
+    formula: r.formula,
+    label: r.label,
+    totalReturn: r.totalReturn,
+    maxDrawdown: r.stats.maxDrawdown,
+    sortino: r.sortino,
+    omega: r.stats.omega,
+  }));
+
+  const vals = {
+    totalReturn: comparison.map(r => parseFloat(r.totalReturn) || -Infinity),
+    maxDrawdown: comparison.map(r => parseFloat(r.maxDrawdown) || Infinity),
+    sortino:     comparison.map(r => parseSortino(r.sortino)),
+    omega:       comparison.map(r => parseSortino(r.omega)),
+  };
+
+  const retRanks = rankDescending(vals.totalReturn);
+  const ddRanks  = rankDescending(vals.maxDrawdown.map(v => -v));
+  const sorRanks = rankDescending(vals.sortino);
+  const omgRanks = rankDescending(vals.omega);
+
+  const cumScores = comparison.map((_, i) => retRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i]);
+
+  const indices = comparison.map((_, i) => i);
+  indices.sort((a, b) => cumScores[a] - cumScores[b]);
+
+  const overallRanks = new Array(comparison.length);
+  for (let rank = 0; rank < indices.length; rank++) {
+    overallRanks[indices[rank]] = rank + 1;
+  }
+  for (let i = 0; i < comparison.length; i++) {
+    comparison[i].overallRank = overallRanks[i];
+  }
+
+  comparison.sort((a, b) => a.overallRank - b.overallRank);
+
   return {
-    comparison: formulaResults.map(r => ({
-      formula: r.formula,
-      label: r.label,
-      totalReturn: r.totalReturn,
-      maxDrawdown: r.stats.maxDrawdown,
-      sortino: r.sortino,
-      omega: r.stats.omega,
-    })),
-    bestFormulaKey: formulaResults[bestIdx].formula,
+    comparison,
     formulaDetails: formulaDetailsMap,
     assetNames,
   };

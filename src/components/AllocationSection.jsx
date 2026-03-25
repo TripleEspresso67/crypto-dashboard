@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { runAllocationAnalysis } from '../backtest/allocationBacktest';
-import FormulaEquityChart from './FormulaEquityChart';
+import FormulaEquityChart, { FORMULA_COLORS } from './FormulaEquityChart';
 
 const DATE_PRESETS = [
   { label: '1 Jan 2021', value: '2021-01-01' },
@@ -109,12 +109,11 @@ export default function AllocationSection({ assetData, ratioData }) {
               <th style={{ textAlign: 'right' }}>Max Drawdown</th>
               <th style={{ textAlign: 'right' }}>Sortino</th>
               <th style={{ textAlign: 'right' }}>Omega</th>
+              <th style={{ textAlign: 'right' }}>Overall Rank</th>
             </tr>
           </thead>
           <tbody>
-            {data.comparison.map(r => {
-              const isBest = r.formula === data.bestFormulaKey;
-              return (
+            {data.comparison.map(r => (
                 <tr
                   key={r.formula}
                   onClick={() => navigate(`/formula/${r.formula}`)}
@@ -122,10 +121,7 @@ export default function AllocationSection({ assetData, ratioData }) {
                   className="clickable-row"
                 >
                   <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {r.formula}
-                    {isBest && (
-                      <span style={{ fontSize: '0.6rem', color: '#58a6ff', marginLeft: 5 }}>BEST</span>
-                    )}
+                    <span style={{ color: FORMULA_COLORS[r.formula] || 'inherit' }}>{r.formula}</span>
                   </td>
                   <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
                     {r.label}
@@ -134,9 +130,9 @@ export default function AllocationSection({ assetData, ratioData }) {
                   <td style={{ textAlign: 'right' }}>{r.maxDrawdown}%</td>
                   <td style={{ textAlign: 'right' }}>{r.sortino}</td>
                   <td style={{ textAlign: 'right' }}>{r.omega}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{r.overallRank}</td>
                 </tr>
-              );
-            })}
+            ))}
           </tbody>
         </table>
       </div>
