@@ -297,7 +297,6 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, sortinos, so
   return {
     totalReturn: totalReturn.toFixed(2),
     sortino: fmtRatio(sortino),
-    sortinoRaw: sortino,
     equity,
     trades: tradeDetails,
     barAllocations,
@@ -306,8 +305,8 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, sortinos, so
 }
 
 /**
- * Run full allocation analysis: compare 5 formulas, find best,
- * return asset table + equity curve + per-bar allocations.
+ * Run full allocation analysis: compare all formulas (A–H),
+ * return asset table + equity curve + per-bar allocations for each.
  */
 export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = ALLOC_BACKTEST_START, lttiAsset = null) {
   const n = mttiAssets.length;

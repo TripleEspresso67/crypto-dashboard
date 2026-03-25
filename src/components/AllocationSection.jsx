@@ -65,7 +65,7 @@ export default function AllocationSection({ assetData, ratioData }) {
   return (
     <>
       <div className="section">
-        <h3 className="section-title">Allocation Formula Comparison</h3>
+        <h3 className="section-title">Allocation Strategies</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
             Backtest from:
@@ -103,7 +103,7 @@ export default function AllocationSection({ assetData, ratioData }) {
         <table className="score-table">
           <thead>
             <tr>
-              <th>Formula</th>
+              <th>Strategy</th>
               <th>Description</th>
               <th style={{ textAlign: 'right' }}>Total Return</th>
               <th style={{ textAlign: 'right' }}>Max Drawdown</th>
@@ -138,7 +138,7 @@ export default function AllocationSection({ assetData, ratioData }) {
       </div>
 
       <div className="section">
-        <h3 className="section-title">All Formulas &mdash; Equity Comparison</h3>
+        <h3 className="section-title">Allocation Strategy Equity Comparison</h3>
         <FormulaEquityChart
           formulaEquities={formulaEquities}
           buyHoldEquity={btcBuyHold?.equity}

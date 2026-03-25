@@ -150,19 +150,16 @@ export function computeRatios(assetCandlesMap) {
 
   const dominance = {};
   for (const name of names) {
-    dominance[name] = { wins: 0, losses: 0, neutral: 0, score: 0 };
+    dominance[name] = { wins: 0, losses: 0, score: 0 };
   }
 
   for (const p of pairs) {
     if (p.signal === 'LONG') {
       dominance[p.numerator].wins++;
       dominance[p.denominator].losses++;
-    } else if (p.signal === 'CASH') {
+    } else {
       dominance[p.numerator].losses++;
       dominance[p.denominator].wins++;
-    } else {
-      dominance[p.numerator].neutral++;
-      dominance[p.denominator].neutral++;
     }
     dominance[p.numerator].score += p.score;
     dominance[p.denominator].score -= p.score;

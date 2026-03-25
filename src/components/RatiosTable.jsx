@@ -12,7 +12,6 @@ export default function RatiosTable({ ratioData }) {
       name,
       wins: d.wins,
       losses: d.losses,
-      neutral: d.neutral,
       score: d.wins - d.losses,
     }))
     .sort((a, b) => b.score - a.score);
@@ -29,20 +28,6 @@ export default function RatiosTable({ ratioData }) {
     if (val === undefined || isNaN(val)) return '--';
     if (!isFinite(val)) return val > 0 ? '+Inf' : '-Inf';
     return val.toFixed(2);
-  }
-
-  function ratioColor(val) {
-    if (val === undefined || isNaN(val) || !isFinite(val)) return 'var(--text-secondary)';
-    if (val > 0) return 'var(--green)';
-    if (val < 0) return 'var(--red)';
-    return 'var(--text-secondary)';
-  }
-
-  function omegaColor(val) {
-    if (val === undefined || isNaN(val) || !isFinite(val)) return 'var(--text-secondary)';
-    if (val > 1) return 'var(--green)';
-    if (val < 1) return 'var(--red)';
-    return 'var(--text-secondary)';
   }
 
   return (
@@ -73,7 +58,6 @@ export default function RatiosTable({ ratioData }) {
               <th>Asset</th>
               <th>Outperforming</th>
               <th>Underperforming</th>
-              <th>Neutral</th>
               <th>Score</th>
             </tr>
           </thead>
@@ -87,9 +71,6 @@ export default function RatiosTable({ ratioData }) {
                 </td>
                 <td>
                   <span className="score-cell negative">{d.losses}</span>
-                </td>
-                <td>
-                  <span className="score-cell zero">{d.neutral}</span>
                 </td>
                 <td style={{
                   color: '#ffffff',
@@ -123,13 +104,10 @@ export default function RatiosTable({ ratioData }) {
                 .slice()
                 .sort((a, b) => b.score - a.score)
                 .map((p, idx) => {
-                  let interpretation = 'Neutral';
-                  if (p.signal === 'LONG') {
-                    interpretation = `${p.numerator} outperforming ${p.denominator}`;
-                  } else if (p.signal === 'CASH') {
-                    interpretation = `${p.denominator} outperforming ${p.numerator}`;
-                  }
-                    return (
+                  const interpretation = p.signal === 'LONG'
+                    ? `${p.numerator} outperforming ${p.denominator}`
+                    : `${p.denominator} outperforming ${p.numerator}`;
+                  return (
                     <tr key={p.label} onClick={() => navigate(`/ratio/${idx}`)} style={{ cursor: 'pointer' }}>
                       <td style={{ fontWeight: 600 }}>{p.label}</td>
                       <td style={{ fontWeight: 600 }}>
