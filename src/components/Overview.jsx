@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import RatiosTable from './RatiosTable';
 import FundamentalsPanel from './FundamentalsPanel';
+import AllocationSection from './AllocationSection';
 
 export default function Overview({ assetData, ratioData, loading, error }) {
   const navigate = useNavigate();
@@ -87,6 +88,8 @@ export default function Overview({ assetData, ratioData, loading, error }) {
       {ratioData && ratioData.pairs.length > 0 && (
         <RatiosTable ratioData={ratioData} />
       )}
+
+      <AllocationSection assetData={assetData} ratioData={ratioData} />
     </div>
   );
 }

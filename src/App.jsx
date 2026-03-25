@@ -11,6 +11,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Overview from './components/Overview';
 import AssetDetail from './components/AssetDetail';
 import RatioDetail from './components/RatioDetail';
+import FormulaDetail from './components/FormulaDetail';
 
 const STRATEGY_PARAMS = {
   'LTTI': LTTI_PARAMS,
@@ -194,6 +195,16 @@ function App() {
           <Route
             path="/ratio/:id"
             element={<RatioDetail ratioData={ratioData} loading={loading} />}
+          />
+          <Route
+            path="/formula/:key"
+            element={
+              <FormulaDetail
+                assetData={assetData}
+                ratioData={ratioData}
+                loading={loading}
+              />
+            }
           />
         </Routes>
       </ErrorBoundary>
