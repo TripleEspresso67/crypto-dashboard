@@ -16,7 +16,7 @@ export const MTTI_OTHERS_PARAMS = {
     sd_upperSd: 1.036, sd_lowerSd: 0.982, sd_src: 'close'
   },
   dpsd: {
-    dpsd_DemaLen: 24, dpsd_DemaSrc: 'close',
+    dpsd_DemaLen: 24, dpsd_DemaSrc: 'open',
     dpsd_PerLen: 32, dpsd_perUp: 60, dpsd_perDown: 40,
     dpsd_SDlen: 27, dpsd_EmaLen: 25
   },
