@@ -20,8 +20,11 @@ export default function RatiosTable({ ratioData }) {
 
   function signalClass(sig) {
     if (sig === 'LONG') return 'long';
-    if (sig === 'CASH') return 'cash';
+    if (sig === 'CASH' || sig === 'SHORT') return 'cash';
     return 'neutral';
+  }
+  function displaySignal(sig) {
+    return sig === 'CASH' ? 'SHORT' : sig;
   }
 
   function formatRatio(val) {
@@ -115,7 +118,7 @@ export default function RatiosTable({ ratioData }) {
                       </td>
                       <td>
                         <span className={`signal-badge ${signalClass(p.signal)}`}>
-                          {p.signal}
+                          {displaySignal(p.signal)}
                         </span>
                       </td>
                       <td style={{ fontWeight: 600 }}>
