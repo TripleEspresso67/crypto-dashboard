@@ -30,7 +30,7 @@ function _sma(src, len) {
   return out;
 }
 
-/** ta.ema — seeds with SMA of first `len` valid values (Pine v6 behaviour). */
+/** ta.ema — seeds with first non-NaN source value (Pine behaviour). */
 function _ema(src, len) {
   const out = new Array(src.length).fill(NaN);
   const k = 2 / (len + 1);
@@ -38,14 +38,8 @@ function _ema(src, len) {
   for (let i = 0; i < src.length; i++) {
     if (Number.isNaN(src[i])) { prev = NaN; out[i] = NaN; continue; }
     if (Number.isNaN(prev)) {
-      if (i >= len - 1) {
-        let s = 0, ok = true;
-        for (let j = 0; j < len; j++) {
-          if (Number.isNaN(src[i - j])) { ok = false; break; }
-          s += src[i - j];
-        }
-        if (ok) { prev = s / len; out[i] = prev; }
-      }
+      prev = src[i];
+      out[i] = prev;
     } else {
       prev = k * src[i] + (1 - k) * prev;
       out[i] = prev;
@@ -194,15 +188,29 @@ function _pnr(src, len, pct) {
     }
     if (!ok) continue;
     w.sort((a, b) => a - b);
-    const r = Math.ceil((pct / 100) * (w.length + 1));
+    const r = Math.ceil((pct / 100) * w.length);
     out[i] = w[Math.max(0, Math.min(r - 1, w.length - 1))];
   }
   return out;
 }
 
-/** ta.median = percentile_nearest_rank(src, len, 50) */
+/** ta.median — proper statistical median (averages two central values for even length) */
 function _median(src, len) {
-  return _pnr(src, len, 50);
+  const out = new Array(src.length).fill(NaN);
+  for (let i = len - 1; i < src.length; i++) {
+    const w = [];
+    let ok = true;
+    for (let j = 0; j < len; j++) {
+      const v = src[i - j];
+      if (Number.isNaN(v)) { ok = false; break; }
+      w.push(v);
+    }
+    if (!ok) continue;
+    w.sort((a, b) => a - b);
+    const mid = Math.floor(len / 2);
+    out[i] = (len % 2 === 1) ? w[mid] : (w[mid - 1] + w[mid]) / 2;
+  }
+  return out;
 }
 
 /** Custom gaussian_filter — starts from bar 0, nz(src[i],0) for OOB */
