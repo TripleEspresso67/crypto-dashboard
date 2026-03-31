@@ -11,6 +11,7 @@ export const FORMULA_COLORS = {
   G: '#ff7b72',
   H: '#79c0ff',
   I: '#e3b341',
+  J: '#56d364',
 };
 
 const BH_COLOR = '#7B2D8E';
