@@ -1,21 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { runAllocationAnalysis } from '../backtest/allocationBacktest';
+import { DEFAULT_BACKTEST_START_DATE, BACKTEST_DATE_PRESETS } from '../constants/backtestDates';
 import FormulaEquityChart, { FORMULA_COLORS } from './FormulaEquityChart';
 
-const DATE_PRESETS = [
-  { label: '1 Jan 2021', value: '2021-01-01' },
-  { label: '1 Jan 2022', value: '2022-01-01' },
-  { label: '1 Jan 2023', value: '2023-01-01' },
-  { label: '1 Jan 2024', value: '2024-01-01' },
-  { label: '1 Jan 2025', value: '2025-01-01' },
-  { label: 'Custom', value: 'custom' },
-];
-
-export default function AllocationSection({ assetData, ratioData }) {
+export default function AllocationSection({ assetData, ratioData, paxgData }) {
   const navigate = useNavigate();
-  const [selectedPreset, setSelectedPreset] = useState('2023-01-01');
-  const [customDate, setCustomDate] = useState('2023-01-01');
+  const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
+  const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
 
   const activeDateStr = selectedPreset === 'custom' ? customDate : selectedPreset;
   const backtestStart = new Date(activeDateStr + 'T00:00:00Z').getTime();
@@ -25,8 +17,8 @@ export default function AllocationSection({ assetData, ratioData }) {
     const mttiAssets = assetData.filter(a => a.config.strategy !== 'LTTI');
     if (mttiAssets.length === 0) return null;
     const lttiAsset = assetData.find(a => a.config.strategy === 'LTTI') ?? null;
-    return runAllocationAnalysis(mttiAssets, ratioData.dominance, backtestStart, lttiAsset);
-  }, [assetData, ratioData, backtestStart]);
+    return runAllocationAnalysis(mttiAssets, ratioData.dominance, backtestStart, lttiAsset, paxgData);
+  }, [assetData, ratioData, paxgData, backtestStart]);
 
   const formulaEquities = useMemo(() => {
     if (!data?.formulaDetails) return {};
@@ -79,7 +71,7 @@ export default function AllocationSection({ assetData, ratioData }) {
               border: '1px solid var(--border)', borderRadius: 4,
             }}
           >
-            {DATE_PRESETS.map(p => (
+            {BACKTEST_DATE_PRESETS.map(p => (
               <option key={p.value} value={p.value}>{p.label}</option>
             ))}
           </select>

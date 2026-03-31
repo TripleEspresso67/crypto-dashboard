@@ -1,7 +1,8 @@
 import { runStrategy } from './scorer.js';
 import { MTTI_OTHERS_PARAMS } from './mttiOthersConfig.js';
+import { DEFAULT_BACKTEST_START } from '../constants/backtestDates.js';
 
-const BACKTEST_START = new Date('2023-01-01T00:00:00Z').getTime();
+const BACKTEST_START = DEFAULT_BACKTEST_START;
 
 function dailyLogReturns(candles) {
   const returns = [];

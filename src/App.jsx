@@ -36,6 +36,7 @@ function applyLivePrice(candles, livePrice) {
 function App() {
   const [assetData, setAssetData] = useState([]);
   const [ratioData, setRatioData] = useState(null);
+  const [paxgData, setPaxgData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastLiveUpdate, setLastLiveUpdate] = useState(null);
@@ -85,6 +86,21 @@ function App() {
       baseDataRef.current = results;
       dailyCandlesRef.current = dailyCandlesByAsset;
       setAssetData(results);
+      setPaxgData(null);
+
+      try {
+        const paxgCandles = await fetchAllCandles('PAXGUSDT', '1d', getWarmupStart('1d'));
+        if (paxgCandles.length > 0) {
+          setPaxgData({
+            config: { symbol: 'PAXGUSDT', name: 'PAXG', interval: '1d', strategy: 'MTTI-others', label: 'PAXG (Allocation only)' },
+            candles: paxgCandles,
+          });
+        } else {
+          console.warn('No data for PAXGUSDT (allocation only)');
+        }
+      } catch (paxgErr) {
+        console.warn(`Failed to load PAXGUSDT (allocation only): ${paxgErr.message}`);
+      }
 
       try {
         const ratios = computeRatios(dailyCandlesByAsset);
@@ -183,6 +199,7 @@ function App() {
               <Overview
                 assetData={assetData}
                 ratioData={ratioData}
+                paxgData={paxgData}
                 loading={loading}
                 error={error}
               />
@@ -202,6 +219,7 @@ function App() {
               <FormulaDetail
                 assetData={assetData}
                 ratioData={ratioData}
+                paxgData={paxgData}
                 loading={loading}
               />
             }

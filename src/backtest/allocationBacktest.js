@@ -1,8 +1,7 @@
 import { runBacktest } from './engine.js';
 import { MTTI_BTC_PARAMS } from '../strategies/mttiBtcConfig.js';
 import { MTTI_OTHERS_PARAMS } from '../strategies/mttiOthersConfig.js';
-
-const ALLOC_BACKTEST_START = new Date('2023-01-01T00:00:00Z').getTime();
+import { DEFAULT_BACKTEST_START } from '../constants/backtestDates.js';
 
 const STRATEGY_PARAMS = {
   'MTTI-BTC': MTTI_BTC_PARAMS,
@@ -15,58 +14,6 @@ function rankDescending(values) {
   const ranks = new Array(values.length);
   indexed.forEach((item, rank) => { ranks[item.i] = rank + 1; });
   return ranks;
-}
-
-function normalizeWeights(weights) {
-  const sum = weights.reduce((s, w) => s + w, 0);
-  if (sum === 0) return weights.map(() => 0);
-  return weights.map(w => w / sum);
-}
-
-function computeWeights(formula, longMask, sortinos, sortinoRanks, domScores, domRanks, n) {
-  const raw = new Array(n).fill(0);
-
-  for (let i = 0; i < n; i++) {
-    if (!longMask[i]) continue;
-
-    switch (formula) {
-      case 'A': {
-        const base = n + 1 - sortinoRanks[i];
-        const domAdj = 1 + 0.3 * (n + 1 - 2 * domRanks[i]) / Math.max(n - 1, 1);
-        raw[i] = base * Math.max(domAdj, 0.1);
-        break;
-      }
-      case 'B': {
-        raw[i] = (n + 1 - sortinoRanks[i]) + (n + 1 - domRanks[i]);
-        break;
-      }
-      case 'C':
-      case 'F':
-      case 'G':
-      case 'H': {
-        raw[i] = Math.max(0, isFinite(sortinos[i]) ? sortinos[i] : 0);
-        break;
-      }
-      case 'D': {
-        const base = n + 1 - domRanks[i];
-        const sortAdj = 1 + 0.3 * (n + 1 - 2 * sortinoRanks[i]) / Math.max(n - 1, 1);
-        raw[i] = base * Math.max(sortAdj, 0.1);
-        break;
-      }
-      case 'E': {
-        raw[i] = n + 1 - domRanks[i];
-        break;
-      }
-    }
-  }
-
-  if (raw.every(w => w === 0) && longMask.some(m => m)) {
-    for (let i = 0; i < n; i++) {
-      if (longMask[i]) raw[i] = 1;
-    }
-  }
-
-  return normalizeWeights(raw);
 }
 
 function fmtRatio(v) {
@@ -85,27 +32,116 @@ function parseSortino(val) {
 
 function formulaLabel(f) {
   switch (f) {
-    case 'A': return 'Assets ranked by Sortino. Higher rank = more allocation. Dominance adjusts each weight by up to ±30%.';
-    case 'B': return 'Sortino rank and Dominance rank contribute equally. Combined rank determines allocation weight.';
-    case 'C': return 'Each LONG asset gets allocation directly proportional to its raw Sortino value. Higher Sortino = more capital.';
-    case 'D': return 'Assets ranked by Dominance. Higher rank = more allocation. Sortino adjusts each weight by up to ±30%.';
-    case 'E': return 'Allocation based purely on Dominance rank. Ignores Sortino entirely.';
-    case 'F': return 'Same as Formula C, but the entire portfolio goes to cash whenever BTC MTTI-1D signal is CASH.';
-    case 'G': return 'Same as Formula C, but the entire portfolio goes to cash whenever BTC LTTI-3D signal is CASH.';
-    case 'H': return 'When LTTI is LONG: allocate like Formula C across all assets. When LTTI is CASH: only BTC MTTI-1D is allowed to trade.';
+    case 'A': return 'BTC Buy & Hold (100% BTC).';
+    case 'B': return 'When LTTI is LONG, allocate to BTC only when MTTI-BTC is LONG. CASH when LTTI is SHORT.';
+    case 'C': return 'When LTTI is LONG, allocate to BTC only when MTTI-BTC is LONG. Full allocation to PAXG instead of CASH when LTTI is SHORT.';
+    case 'D': return 'When LTTI is LONG allocate 100% to Dominant Asset (fallback to most dominant LONG asset). CASH when LTTI is SHORT.';
+    case 'E': return 'When LTTI is LONG allocate 100% to best Overall Rank asset (fallback to next best LONG asset). CASH when LTTI is SHORT.';
+    case 'F': return 'When MTTI-BTC is LONG allocate 100% to Dominant Asset (fallback to most dominant LONG asset). CASH when MTTI-BTC is SHORT.';
+    case 'G': return 'When MTTI-BTC is LONG allocate 100% to best Overall Rank asset (fallback to next best LONG asset). CASH when MTTI-BTC is SHORT.';
+    case 'H': return 'When LTTI is LONG allocate 50% BTC and 50% to Dominant Asset (fallback to most dominant LONG asset). CASH when LTTI is SHORT.';
+    case 'I': return 'When LTTI is LONG allocate 50% BTC and 50% to best Overall Rank asset (fallback to next best LONG asset). CASH when LTTI is SHORT.';
     default: return f;
   }
 }
 
-/**
- * @param {string} formula
- * @param {Array} overrideSignals - optional sorted {time,signal}[] for F/G global cash override
- * @param {Object} [opts] - extra options
- * @param {Array}  [opts.btcOnlyOverride] - sorted {time,signal}[]; when CASH, only btcMttiIdx is allowed
- * @param {number} [opts.btcMttiIdx] - index of BTC MTTI in mttiAssets
- */
-function runSingleFormula(formula, timeline, closeMaps, mttiAssets, sortinos, sortinoRanks, domScores, domRanks, n, overrideSignals, opts) {
+function pickFirstLong(order, longMask) {
+  for (const i of order) {
+    if (longMask[i]) return i;
+  }
+  return -1;
+}
+
+function computeAssetOverallRanks(assetBacktests) {
+  const totalReturnVals = assetBacktests.map(b => parseFloat(b?.stats?.totalReturn) || -Infinity);
+  const maxDrawdownVals = assetBacktests.map(b => parseFloat(b?.stats?.maxDrawdown) || Infinity);
+  const sortinoVals = assetBacktests.map(b => parseSortino(b?.stats?.sortino));
+  const omegaVals = assetBacktests.map(b => parseSortino(b?.stats?.omega));
+  const kellyVals = assetBacktests.map(b => parseFloat(b?.stats?.kelly) || -Infinity);
+
+  const retRanks = rankDescending(totalReturnVals);
+  const ddRanks = rankDescending(maxDrawdownVals.map(v => -v));
+  const sorRanks = rankDescending(sortinoVals);
+  const omgRanks = rankDescending(omegaVals);
+  const kelRanks = rankDescending(kellyVals);
+
+  const cumulative = assetBacktests.map((_, i) => retRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i] + kelRanks[i]);
+  const indices = cumulative.map((_, i) => i);
+  indices.sort((a, b) => cumulative[a] - cumulative[b]);
+
+  const overallRanks = new Array(assetBacktests.length);
+  for (let rank = 0; rank < indices.length; rank++) {
+    overallRanks[indices[rank]] = rank + 1;
+  }
+
+  return overallRanks;
+}
+
+function allocationForFormula(formula, ctx) {
+  const {
+    n,
+    lttiLong,
+    btcLong,
+    btcIdx,
+    hasPrice,
+    hasPaxgPrice,
+    dominantLongIdx,
+    rankedLongIdx,
+  } = ctx;
+
+  const weights = new Array(n).fill(0);
+  let paxgWeight = 0;
+  const addWeight = (idx, weight) => {
+    if (idx < 0 || idx >= n || !hasPrice[idx]) return;
+    weights[idx] += weight;
+  };
+
+  switch (formula) {
+    case 'A':
+      addWeight(btcIdx, 1);
+      break;
+    case 'B':
+      if (lttiLong && btcLong) addWeight(btcIdx, 1);
+      break;
+    case 'C':
+      if (lttiLong) {
+        if (btcLong) addWeight(btcIdx, 1);
+      } else {
+        if (hasPaxgPrice) paxgWeight = 1;
+      }
+      break;
+    case 'D':
+      if (lttiLong) addWeight(dominantLongIdx, 1);
+      break;
+    case 'E':
+      if (lttiLong) addWeight(rankedLongIdx, 1);
+      break;
+    case 'F':
+      if (btcLong) addWeight(dominantLongIdx, 1);
+      break;
+    case 'G':
+      if (btcLong) addWeight(rankedLongIdx, 1);
+      break;
+    case 'H':
+      if (lttiLong) {
+        addWeight(btcIdx, 0.5);
+        addWeight(dominantLongIdx, 0.5);
+      }
+      break;
+    case 'I':
+      if (lttiLong) {
+        addWeight(btcIdx, 0.5);
+        addWeight(rankedLongIdx, 0.5);
+      }
+      break;
+  }
+
+  return { weights, paxgWeight };
+}
+
+function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrder, overallOrder, lttiSignals, btcIdx, paxgMap) {
   const INITIAL_CAPITAL = 1000;
+  const n = mttiAssets.length;
   let portfolioValue = INITIAL_CAPITAL;
   const tradePnls = [];
   const tradeDetails = [];
@@ -117,45 +153,25 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, sortinos, so
   let peakEquity = INITIAL_CAPITAL;
   let maxDrawdown = 0;
 
-  let overridePtr = 0;
-  let currentOverrideSignal = 'CASH';
-
-  const btcOnly = opts?.btcOnlyOverride;
-  const btcIdx = opts?.btcMttiIdx ?? -1;
-  let btcOnlyPtr = 0;
-  let currentBtcOnlySignal = 'CASH';
+  let lttiPtr = 0;
+  let currentLttiSignal = 'CASH';
+  let prevWeights = new Array(n).fill(0);
+  let prevPaxgWeight = 0;
 
   for (let t = 0; t < timeline.length; t++) {
     const currTime = timeline[t];
 
-    if (overrideSignals) {
-      while (overridePtr < overrideSignals.length && overrideSignals[overridePtr].time <= currTime) {
-        currentOverrideSignal = overrideSignals[overridePtr].signal;
-        overridePtr++;
-      }
+    while (lttiPtr < lttiSignals.length && lttiSignals[lttiPtr].time <= currTime) {
+      currentLttiSignal = lttiSignals[lttiPtr].signal;
+      lttiPtr++;
     }
 
-    if (btcOnly) {
-      while (btcOnlyPtr < btcOnly.length && btcOnly[btcOnlyPtr].time <= currTime) {
-        currentBtcOnlySignal = btcOnly[btcOnlyPtr].signal;
-        btcOnlyPtr++;
-      }
-    }
-
-    let longMask = mttiAssets.map((_, i) => {
-      if (!closeMaps[i].has(currTime)) return false;
-      return closeMaps[i].get(currTime).signal === 'LONG';
-    });
-
-    if (overrideSignals && currentOverrideSignal !== 'LONG') {
-      longMask = longMask.map(() => false);
-    }
-
-    if (btcOnly && currentBtcOnlySignal !== 'LONG') {
-      longMask = longMask.map((m, i) => i === btcIdx ? m : false);
-    }
-
-    const anyLong = longMask.some(m => m);
+    const hasPrice = closeMaps.map(m => m.has(currTime));
+    const hasPaxgPrice = Boolean(paxgMap?.has(currTime));
+    const longMask = mttiAssets.map((_, i) => hasPrice[i] && closeMaps[i].get(currTime).signal === 'LONG');
+    const btcLong = btcIdx >= 0 && longMask[btcIdx];
+    const dominantLongIdx = pickFirstLong(dominanceOrder, longMask);
+    const rankedLongIdx = pickFirstLong(overallOrder, longMask);
 
     if (t > 0) {
       const prevTime = timeline[t - 1];
@@ -165,40 +181,20 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, sortinos, so
         if (!prev || !curr || prev.close === 0) return 0;
         return (curr.close - prev.close) / prev.close;
       });
-
-      let prevLongMask = mttiAssets.map((_, i) => {
-        if (!closeMaps[i].has(prevTime)) return false;
-        return closeMaps[i].get(prevTime).signal === 'LONG';
-      });
-
-      if (overrideSignals) {
-        let prevOverrideSignal = 'CASH';
-        for (let k = 0; k < overrideSignals.length; k++) {
-          if (overrideSignals[k].time > prevTime) break;
-          prevOverrideSignal = overrideSignals[k].signal;
-        }
-        if (prevOverrideSignal !== 'LONG') {
-          prevLongMask = prevLongMask.map(() => false);
+      let paxgReturn = 0;
+      if (paxgMap) {
+        const prevPaxg = paxgMap.get(prevTime);
+        const currPaxg = paxgMap.get(currTime);
+        if (prevPaxg && currPaxg && prevPaxg.close > 0) {
+          paxgReturn = (currPaxg.close - prevPaxg.close) / prevPaxg.close;
         }
       }
-
-      if (btcOnly) {
-        let prevBtcOnlySignal = 'CASH';
-        for (let k = 0; k < btcOnly.length; k++) {
-          if (btcOnly[k].time > prevTime) break;
-          prevBtcOnlySignal = btcOnly[k].signal;
-        }
-        if (prevBtcOnlySignal !== 'LONG') {
-          prevLongMask = prevLongMask.map((m, i) => i === btcIdx ? m : false);
-        }
-      }
-
-      const weights = computeWeights(formula, prevLongMask, sortinos, sortinoRanks, domScores, domRanks, n);
 
       let portfolioReturn = 0;
       for (let i = 0; i < n; i++) {
-        portfolioReturn += weights[i] * assetReturns[i];
+        portfolioReturn += prevWeights[i] * assetReturns[i];
       }
+      portfolioReturn += prevPaxgWeight * paxgReturn;
 
       portfolioValue *= (1 + portfolioReturn);
     }
@@ -207,20 +203,34 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, sortinos, so
     const dd = (peakEquity - portfolioValue) / peakEquity;
     if (dd > maxDrawdown) maxDrawdown = dd;
 
-    const currentWeights = computeWeights(formula, longMask, sortinos, sortinoRanks, domScores, domRanks, n);
+    const { weights: currentWeights, paxgWeight } = allocationForFormula(formula, {
+      n,
+      lttiLong: currentLttiSignal === 'LONG',
+      btcLong,
+      btcIdx,
+      hasPrice,
+      hasPaxgPrice,
+      dominantLongIdx,
+      rankedLongIdx,
+    });
+
+    const invested = (currentWeights.reduce((s, w) => s + w, 0) + paxgWeight) > 0;
     const allocMap = {};
     for (let i = 0; i < n; i++) {
       allocMap[mttiAssets[i].config.name] = currentWeights[i] * 100;
+    }
+    if (paxgMap) {
+      allocMap.PAXG = paxgWeight * 100;
     }
 
     equity.push({ time: currTime, value: portfolioValue });
     barAllocations.push({ time: currTime, weights: allocMap });
 
-    if (anyLong && !inTrade) {
+    if (invested && !inTrade) {
       inTrade = true;
       tradeEntryValue = portfolioValue;
       tradeEntryTime = currTime;
-    } else if (!anyLong && inTrade) {
+    } else if (!invested && inTrade) {
       const pnlPct = (portfolioValue - tradeEntryValue) / tradeEntryValue;
       tradePnls.push(pnlPct);
       tradeDetails.push({
@@ -231,6 +241,9 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, sortinos, so
       });
       inTrade = false;
     }
+
+    prevWeights = currentWeights;
+    prevPaxgWeight = paxgWeight;
   }
 
   if (inTrade) {
@@ -305,10 +318,10 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, sortinos, so
 }
 
 /**
- * Run full allocation analysis: compare all formulas (A–H),
+ * Run full allocation analysis: compare all formulas (A–I),
  * return asset table + equity curve + per-bar allocations for each.
  */
-export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = ALLOC_BACKTEST_START, lttiAsset = null) {
+export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEFAULT_BACKTEST_START, lttiAsset = null, paxgAsset = null) {
   const n = mttiAssets.length;
   if (n === 0) return null;
 
@@ -319,13 +332,14 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = ALL
   });
 
   const sortinos = assetBacktests.map(b => parseSortino(b?.stats?.sortino));
-  const sortinoRanks = rankDescending(sortinos.map(s => isFinite(s) ? s : -1e9));
 
   const domScores = mttiAssets.map(a => {
     const d = dominance?.[a.config.name];
     return d ? d.wins - d.losses : 0;
   });
-  const domRanks = rankDescending(domScores);
+  const dominanceOrder = domScores.map((_, i) => i).sort((a, b) => domScores[b] - domScores[a]);
+  const overallRanks = computeAssetOverallRanks(assetBacktests);
+  const overallOrder = overallRanks.map((_, i) => i).sort((a, b) => overallRanks[a] - overallRanks[b]);
 
   const closeMaps = mttiAssets.map(a => {
     const map = new Map();
@@ -334,10 +348,18 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = ALL
     }
     return map;
   });
+  const paxgMap = paxgAsset?.candles
+    ? new Map(paxgAsset.candles.map(c => [c.time, { close: c.close }]))
+    : null;
 
   const allTimes = new Set();
   for (const m of closeMaps) {
     for (const t of m.keys()) {
+      if (t >= backtestStart) allTimes.add(t);
+    }
+  }
+  if (paxgMap) {
+    for (const t of paxgMap.keys()) {
       if (t >= backtestStart) allTimes.add(t);
     }
   }
@@ -346,28 +368,28 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = ALL
   if (timeline.length < 2) return null;
 
   const btcMttiIdx = mttiAssets.findIndex(a => a.config.strategy === 'MTTI-BTC');
-  const btcMttiOverride = btcMttiIdx >= 0
-    ? mttiAssets[btcMttiIdx].candles.map((c, i) => ({ time: c.time, signal: mttiAssets[btcMttiIdx].signals[i] }))
-    : null;
-
-  const lttiOverride = lttiAsset
+  const lttiSignals = lttiAsset
     ? lttiAsset.candles.map((c, i) => ({ time: c.time, signal: lttiAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const formulas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
   const formulaResults = formulas.map(f => {
-    let override = null;
-    let opts = undefined;
-    if (f === 'F') override = btcMttiOverride;
-    if (f === 'G') override = lttiOverride;
-    if (f === 'H') {
-      opts = { btcOnlyOverride: lttiOverride, btcMttiIdx: btcMttiIdx >= 0 ? btcMttiIdx : undefined };
-    }
-    const result = runSingleFormula(f, timeline, closeMaps, mttiAssets, sortinos, sortinoRanks, domScores, domRanks, n, override, opts);
+    const result = runSingleFormula(
+      f,
+      timeline,
+      closeMaps,
+      mttiAssets,
+      dominanceOrder,
+      overallOrder,
+      lttiSignals ?? [],
+      btcMttiIdx,
+      paxgMap
+    );
     return { formula: f, label: formulaLabel(f), ...result };
   });
 
   const assetNames = mttiAssets.map(a => a.config.name);
+  if (paxgMap) assetNames.push('PAXG');
 
   const formulaDetailsMap = {};
   for (const r of formulaResults) {
@@ -383,6 +405,7 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = ALL
           label: a.config.label,
           sortino: assetBacktests[i]?.stats?.sortino ?? '--',
           sortinoRaw: sortinos[i],
+          overallRank: overallRanks[i],
           signal: lastSignal,
           domScore: domScores[i],
           allocation: lastAlloc?.weights?.[a.config.name] ?? 0,
@@ -417,12 +440,12 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = ALL
   const indices = comparison.map((_, i) => i);
   indices.sort((a, b) => cumScores[a] - cumScores[b]);
 
-  const overallRanks = new Array(comparison.length);
+  const strategyOverallRanks = new Array(comparison.length);
   for (let rank = 0; rank < indices.length; rank++) {
-    overallRanks[indices[rank]] = rank + 1;
+    strategyOverallRanks[indices[rank]] = rank + 1;
   }
   for (let i = 0; i < comparison.length; i++) {
-    comparison[i].overallRank = overallRanks[i];
+    comparison[i].overallRank = strategyOverallRanks[i];
   }
 
   comparison.sort((a, b) => a.overallRank - b.overallRank);

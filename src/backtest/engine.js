@@ -1,4 +1,6 @@
-export const DEFAULT_BACKTEST_START = new Date('2023-01-01T00:00:00Z').getTime();
+import { DEFAULT_BACKTEST_START as SHARED_DEFAULT_BACKTEST_START } from '../constants/backtestDates';
+
+export const DEFAULT_BACKTEST_START = SHARED_DEFAULT_BACKTEST_START;
 const INITIAL_CAPITAL = 1000;
 
 /**
@@ -9,7 +11,7 @@ const INITIAL_CAPITAL = 1000;
  * @param {number[]} compositeScores composite score per bar
  * @param {number} longThresh score threshold to go long
  * @param {number} shortThresh score threshold to go to cash
- * @param {number} [backtestStart] start timestamp (ms). Defaults to Jan 1 2023.
+ * @param {number} [backtestStart] start timestamp (ms). Defaults to Jan 22 2024.
  * @returns {{ equity: {time,value}[], trades: Object[], stats: Object }}
  */
 export function runBacktest(candles, compositeScores, longThresh = 0.1, shortThresh = -0.1, backtestStart = DEFAULT_BACKTEST_START) {
@@ -78,6 +80,7 @@ export function runBacktest(candles, compositeScores, longThresh = 0.1, shortThr
   let sharpe = NaN;
   let sortino = NaN;
   let omega = NaN;
+  let kelly = NaN;
 
   const tradePnls = trades.map(t => t.pnlPct / 100);
   if (tradePnls.length >= 2) {
@@ -98,6 +101,24 @@ export function runBacktest(candles, compositeScores, longThresh = 0.1, shortThr
       else lossSum += -r;
     }
     omega = lossSum > 0 ? 1 + gains / lossSum : (gains > 0 ? Infinity : 1);
+  }
+
+  if (tradePnls.length > 0) {
+    const winningTrades = tradePnls.filter(r => r > 0);
+    const losingTradesAbs = tradePnls.filter(r => r < 0).map(r => -r);
+    const p = winningTrades.length / tradePnls.length;
+    const q = 1 - p;
+
+    if (winningTrades.length === 0) {
+      kelly = -1;
+    } else if (losingTradesAbs.length === 0) {
+      kelly = 1;
+    } else {
+      const avgWin = winningTrades.reduce((s, v) => s + v, 0) / winningTrades.length;
+      const avgLoss = losingTradesAbs.reduce((s, v) => s + v, 0) / losingTradesAbs.length;
+      const b = avgLoss > 0 ? avgWin / avgLoss : NaN;
+      kelly = b > 0 ? p - (q / b) : NaN;
+    }
   }
 
   function fmtRatio(v) {
@@ -132,6 +153,7 @@ export function runBacktest(candles, compositeScores, longThresh = 0.1, shortThr
     sharpe: fmtRatio(sharpe),
     sortino: fmtRatio(sortino),
     omega: fmtRatio(omega),
+    kelly: isNaN(kelly) ? '--' : (kelly * 100).toFixed(2),
   };
 
   return { equity, trades, stats };

@@ -5,10 +5,11 @@ import EquityCurve from './EquityCurve';
 import ScoreTable from './ScoreTable';
 import StatsPanel from './StatsPanel';
 import TradeList from './TradeList';
-import { runBacktest, DEFAULT_BACKTEST_START } from '../backtest/engine';
+import { runBacktest } from '../backtest/engine';
 import { MTTI_BTC_PARAMS } from '../strategies/mttiBtcConfig';
 import { MTTI_OTHERS_PARAMS } from '../strategies/mttiOthersConfig';
 import { LTTI_PARAMS } from '../strategies/lttiConfig';
+import { BACKTEST_DATE_PRESETS, DEFAULT_BACKTEST_START_DATE } from '../constants/backtestDates';
 
 const STRATEGY_PARAMS = {
   'LTTI': LTTI_PARAMS,
@@ -16,29 +17,13 @@ const STRATEGY_PARAMS = {
   'MTTI-others': MTTI_OTHERS_PARAMS,
 };
 
-const DATE_PRESETS = [
-  { label: '1 Jan 2020', value: '2020-01-01' },
-  { label: '1 Jan 2021', value: '2021-01-01' },
-  { label: '1 Jan 2022', value: '2022-01-01' },
-  { label: '1 Jan 2023', value: '2023-01-01' },
-  { label: '1 Jan 2024', value: '2024-01-01' },
-  { label: '1 Jan 2025', value: '2025-01-01' },
-  { label: 'Custom', value: 'custom' },
-];
-
-function toDateStr(ts) {
-  const d = new Date(ts);
-  return d.toISOString().split('T')[0];
-}
-
 export default function AssetDetail({ assetData, loading }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const idx = parseInt(id, 10);
 
-  const defaultDateStr = toDateStr(DEFAULT_BACKTEST_START);
-  const [selectedPreset, setSelectedPreset] = useState(defaultDateStr);
-  const [customDate, setCustomDate] = useState(defaultDateStr);
+  const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
+  const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
   const [longThreshStr, setLongThreshStr] = useState(null);
   const [shortThreshStr, setShortThreshStr] = useState(null);
 
@@ -183,7 +168,7 @@ export default function AssetDetail({ assetData, loading }) {
                   border: '1px solid var(--border)', borderRadius: 4,
                 }}
               >
-                {DATE_PRESETS.map(p => (
+                {BACKTEST_DATE_PRESETS.map(p => (
                   <option key={p.value} value={p.value}>{p.label}</option>
                 ))}
               </select>

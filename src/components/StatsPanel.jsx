@@ -14,6 +14,7 @@ export default function StatsPanel({ stats }) {
     { label: 'Sharpe Ratio', value: stats.sharpe },
     { label: 'Sortino Ratio', value: stats.sortino },
     { label: 'Omega Ratio', value: stats.omega },
+    { label: 'Kelly Criterion', value: stats.kelly === '--' ? '--' : `${stats.kelly}%` },
   ];
 
   return (

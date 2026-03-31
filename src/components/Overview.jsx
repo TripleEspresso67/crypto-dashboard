@@ -1,5 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { runBacktest } from '../backtest/engine';
+import { MTTI_BTC_PARAMS } from '../strategies/mttiBtcConfig';
+import { MTTI_OTHERS_PARAMS } from '../strategies/mttiOthersConfig';
+import { LTTI_PARAMS } from '../strategies/lttiConfig';
+import { BACKTEST_DATE_PRESETS, DEFAULT_BACKTEST_START_DATE } from '../constants/backtestDates';
 import RatiosTable from './RatiosTable';
 import FundamentalsPanel from './FundamentalsPanel';
 import AllocationSection from './AllocationSection';
@@ -17,32 +22,61 @@ function parseNum(v) {
   return isNaN(n) ? -Infinity : n;
 }
 
-export default function Overview({ assetData, ratioData, loading, error }) {
+const STRATEGY_PARAMS = {
+  'LTTI': LTTI_PARAMS,
+  'MTTI-BTC': MTTI_BTC_PARAMS,
+  'MTTI-others': MTTI_OTHERS_PARAMS,
+};
+
+export default function Overview({ assetData, ratioData, paxgData, loading, error }) {
   const navigate = useNavigate();
+  const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
+  const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
+
+  const activeDateStr = selectedPreset === 'custom' ? customDate : selectedPreset;
+
+  const tableBacktestStart = useMemo(() => {
+    const parsed = Date.parse(`${activeDateStr}T00:00:00Z`);
+    return isNaN(parsed) ? Date.parse(`${DEFAULT_BACKTEST_START_DATE}T00:00:00Z`) : parsed;
+  }, [activeDateStr]);
 
   const assetPerf = useMemo(() => {
     if (!assetData || assetData.length === 0) return [];
-    const rows = assetData.map((a, idx) => ({
-      idx,
-      name: a.config.name,
-      strategy: `${a.config.strategy} ${a.config.interval.toUpperCase()}`,
-      totalReturn: a.backtest?.stats?.totalReturn ?? '--',
-      maxDrawdown: a.backtest?.stats?.maxDrawdown ?? '--',
-      sortino: a.backtest?.stats?.sortino ?? '--',
-      omega: a.backtest?.stats?.omega ?? '--',
-    }));
+    const rows = assetData.map((a, idx) => {
+      const stratParams = STRATEGY_PARAMS[a.config.strategy];
+      const stats = runBacktest(
+        a.candles,
+        a.compositeScores,
+        stratParams?.longThresh ?? 0.1,
+        stratParams?.shortThresh ?? -0.1,
+        tableBacktestStart
+      ).stats;
+
+      return {
+        idx,
+        name: a.config.name,
+        strategy: `${a.config.strategy} ${a.config.interval.toUpperCase()}`,
+        totalReturn: stats?.totalReturn ?? '--',
+        maxDrawdown: stats?.maxDrawdown ?? '--',
+        sortino: stats?.sortino ?? '--',
+        omega: stats?.omega ?? '--',
+        kelly: stats?.kelly ?? '--',
+      };
+    });
 
     const retVals = rows.map(r => parseNum(r.totalReturn));
     const ddVals = rows.map(r => -parseNum(r.maxDrawdown));
     const sorVals = rows.map(r => parseNum(r.sortino));
     const omgVals = rows.map(r => parseNum(r.omega));
+    const kelVals = rows.map(r => parseNum(r.kelly));
 
     const retRanks = rankDescending(retVals);
     const ddRanks = rankDescending(ddVals);
     const sorRanks = rankDescending(sorVals);
     const omgRanks = rankDescending(omgVals);
+    const kelRanks = rankDescending(kelVals);
 
-    const cumScores = rows.map((_, i) => retRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i]);
+    const cumScores = rows.map((_, i) => retRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i] + kelRanks[i]);
     const indices = rows.map((_, i) => i);
     indices.sort((a, b) => cumScores[a] - cumScores[b]);
     const overallRanks = new Array(rows.length);
@@ -51,7 +85,7 @@ export default function Overview({ assetData, ratioData, loading, error }) {
     for (let i = 0; i < rows.length; i++) rows[i].overallRank = overallRanks[i];
     rows.sort((a, b) => a.overallRank - b.overallRank);
     return rows;
-  }, [assetData]);
+  }, [assetData, tableBacktestStart]);
 
   if (error) {
     return <div className="error-msg">{error}</div>;
@@ -67,6 +101,14 @@ export default function Overview({ assetData, ratioData, loading, error }) {
         </p>
       </div>
     );
+  }
+
+  function handlePresetChange(e) {
+    const val = e.target.value;
+    setSelectedPreset(val);
+    if (val !== 'custom') {
+      setCustomDate(val);
+    }
   }
 
   function formatPrice(p) {
@@ -132,7 +174,44 @@ export default function Overview({ assetData, ratioData, loading, error }) {
 
       {assetPerf.length > 0 && (
         <div className="section">
-          <h3 className="section-title">Asset Strategy Performance</h3>
+          <div
+            className="section-title"
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
+          >
+            <h3 style={{ margin: 0, fontSize: 'inherit', fontWeight: 'inherit' }}>Asset Strategy Performance</h3>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Backtest from
+              <select
+                value={selectedPreset}
+                onChange={handlePresetChange}
+                style={{
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                  borderRadius: 6,
+                  padding: '4px 8px',
+                }}
+              >
+                {BACKTEST_DATE_PRESETS.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+              {selectedPreset === 'custom' && (
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                  }}
+                />
+              )}
+            </label>
+          </div>
           <table className="score-table">
             <thead>
               <tr>
@@ -142,6 +221,7 @@ export default function Overview({ assetData, ratioData, loading, error }) {
                 <th style={{ textAlign: 'right' }}>Max Drawdown</th>
                 <th style={{ textAlign: 'right' }}>Sortino</th>
                 <th style={{ textAlign: 'right' }}>Omega</th>
+                <th style={{ textAlign: 'right' }}>Kelly</th>
                 <th style={{ textAlign: 'right' }}>Overall Rank</th>
               </tr>
             </thead>
@@ -158,6 +238,7 @@ export default function Overview({ assetData, ratioData, loading, error }) {
                   <td style={{ textAlign: 'right' }}>{r.maxDrawdown}%</td>
                   <td style={{ textAlign: 'right' }}>{r.sortino}</td>
                   <td style={{ textAlign: 'right' }}>{r.omega}</td>
+                  <td style={{ textAlign: 'right' }}>{r.kelly}%</td>
                   <td style={{ textAlign: 'right', fontWeight: 600 }}>{r.overallRank}</td>
                 </tr>
               ))}
@@ -172,7 +253,7 @@ export default function Overview({ assetData, ratioData, loading, error }) {
         <RatiosTable ratioData={ratioData} />
       )}
 
-      <AllocationSection assetData={assetData} ratioData={ratioData} />
+      <AllocationSection assetData={assetData} ratioData={ratioData} paxgData={paxgData} />
     </div>
   );
 }
