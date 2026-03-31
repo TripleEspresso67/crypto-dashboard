@@ -115,7 +115,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                   <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                     <span style={{ color: FORMULA_COLORS[r.formula] || 'inherit' }}>{r.formula}</span>
                   </td>
-                  <td style={{ fontSize: r.formula === 'J' ? '0.72rem' : '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                  <td style={{ fontSize: r.formula === 'I' ? '0.72rem' : '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
                     {r.label}
                   </td>
                   <td style={{ textAlign: 'right' }}>{r.totalReturn}%</td>

@@ -4,14 +4,13 @@ import { createChart, LineSeries } from 'lightweight-charts';
 export const FORMULA_COLORS = {
   A: '#ffffff',
   B: '#58a6ff',
-  C: '#f78166',
-  D: '#7ee787',
-  E: '#d2a8ff',
-  F: '#ffa657',
-  G: '#ff7b72',
-  H: '#79c0ff',
-  I: '#e3b341',
-  J: '#56d364',
+  C: '#7ee787',
+  D: '#d2a8ff',
+  E: '#ffa657',
+  F: '#ff7b72',
+  G: '#79c0ff',
+  H: '#e3b341',
+  I: '#56d364',
 };
 
 const BH_COLOR = '#7B2D8E';

@@ -35,14 +35,13 @@ function formulaLabel(f) {
   switch (f) {
     case 'A': return 'BTC Buy & Hold (100% BTC).';
     case 'B': return 'When LTTI is LONG, allocate to BTC only when MTTI-BTC is LONG. CASH when LTTI is SHORT.';
-    case 'C': return 'When LTTI is LONG, allocate to BTC only when MTTI-BTC is LONG. Full allocation to PAXG instead of CASH when LTTI is SHORT.';
-    case 'D': return 'When LTTI is LONG allocate 100% to Dominant Asset (fallback to most dominant LONG asset). CASH when LTTI is SHORT.';
-    case 'E': return 'When LTTI is LONG allocate 100% to best Overall Rank asset (fallback to next best LONG asset). CASH when LTTI is SHORT.';
-    case 'F': return 'When MTTI-BTC is LONG allocate 100% to Dominant Asset (fallback to most dominant LONG asset). CASH when MTTI-BTC is SHORT.';
-    case 'G': return 'When MTTI-BTC is LONG allocate 100% to best Overall Rank asset (fallback to next best LONG asset). CASH when MTTI-BTC is SHORT.';
-    case 'H': return 'When LTTI is LONG allocate 50% BTC and 50% to Dominant Asset (fallback to most dominant LONG asset). CASH when LTTI is SHORT.';
-    case 'I': return 'When LTTI is LONG allocate 50% BTC and 50% to best Overall Rank asset (fallback to next best LONG asset). CASH when LTTI is SHORT.';
-    case 'J': return 'Strategy J logic (step-by-step): 1) If LTTI is SHORT, allocate 100% to CASH. 2) If LTTI is LONG, evaluate assets by dominance order and only consider assets that are currently LONG. 3) Exclude BNB and DOGE entirely from this strategy. 4) For each eligible non-BTC asset, proposed allocation = Kelly Criterion (using the hardcoded Kelly backtest window that starts on 1 Jan 2023), except HYPE which is forced to 10%. 5) Build the non-BTC sleeve in dominance order with a hard cap of 60% total for all non-BTC assets combined; do not rescale to force 60%, and if adding the next less-dominant eligible asset would breach 60%, skip/cut off that asset. 6) After the non-BTC sleeve is set, allocate BTC only if BTC is LONG. 7) If BTC is LONG, BTC receives the remaining portfolio weight (100% minus the non-BTC sleeve). 8) If BTC is not LONG, the remaining weight stays in CASH. BTC is not capped by Kelly in this strategy.';
+    case 'C': return 'When LTTI is LONG allocate 100% to Dominant Asset (fallback to most dominant LONG asset). CASH when LTTI is SHORT.';
+    case 'D': return 'When LTTI is LONG allocate 100% to best Overall Rank asset (fallback to next best LONG asset). CASH when LTTI is SHORT.';
+    case 'E': return 'When MTTI-BTC is LONG allocate 100% to Dominant Asset (fallback to most dominant LONG asset). CASH when MTTI-BTC is SHORT.';
+    case 'F': return 'When MTTI-BTC is LONG allocate 100% to best Overall Rank asset (fallback to next best LONG asset). CASH when MTTI-BTC is SHORT.';
+    case 'G': return 'When LTTI is LONG allocate 50% BTC and 50% to Dominant Asset (fallback to most dominant LONG asset). CASH when LTTI is SHORT.';
+    case 'H': return 'When LTTI is LONG allocate 50% BTC and 50% to best Overall Rank asset (fallback to next best LONG asset). CASH when LTTI is SHORT.';
+    case 'I': return 'Strategy I logic (step-by-step): 1) If LTTI is SHORT, allocate 100% to CASH. 2) If LTTI is LONG, evaluate assets by dominance order and only consider assets that are currently LONG. 3) Exclude BNB and DOGE entirely from this strategy. 4) For each eligible non-BTC asset, proposed allocation = Kelly Criterion (using the hardcoded Kelly backtest window that starts on 1 Jan 2023), except HYPE which is forced to 10%. 5) Build the non-BTC sleeve in dominance order with a hard cap of 60% total for all non-BTC assets combined; do not rescale to force 60%, and if adding the next less-dominant eligible asset would breach 60%, skip/cut off that asset. 6) After the non-BTC sleeve is set, allocate BTC only if BTC is LONG. 7) If BTC is LONG, BTC receives the remaining portfolio weight (100% minus the non-BTC sleeve). 8) If BTC is not LONG, the remaining weight stays in CASH. BTC is not capped by Kelly in this strategy.';
     default: return f;
   }
 }
@@ -110,37 +109,30 @@ function allocationForFormula(formula, ctx) {
       if (lttiLong && btcLong) addWeight(btcIdx, 1);
       break;
     case 'C':
-      if (lttiLong) {
-        if (btcLong) addWeight(btcIdx, 1);
-      } else {
-        if (hasPaxgPrice) paxgWeight = 1;
-      }
-      break;
-    case 'D':
       if (lttiLong) addWeight(dominantLongIdx, 1);
       break;
-    case 'E':
+    case 'D':
       if (lttiLong) addWeight(rankedLongIdx, 1);
       break;
-    case 'F':
+    case 'E':
       if (btcLong) addWeight(dominantLongIdx, 1);
       break;
-    case 'G':
+    case 'F':
       if (btcLong) addWeight(rankedLongIdx, 1);
       break;
-    case 'H':
+    case 'G':
       if (lttiLong) {
         addWeight(btcIdx, 0.5);
         addWeight(dominantLongIdx, 0.5);
       }
       break;
-    case 'I':
+    case 'H':
       if (lttiLong) {
         addWeight(btcIdx, 0.5);
         addWeight(rankedLongIdx, 0.5);
       }
       break;
-    case 'J':
+    case 'I':
       if (lttiLong) {
         let nonBtcAllocated = 0;
         for (const idx of dominanceOrder) {
@@ -347,7 +339,7 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
 }
 
 /**
- * Run full allocation analysis: compare all formulas (A–J),
+ * Run full allocation analysis: compare all formulas (A-I),
  * return asset table + equity curve + per-bar allocations for each.
  */
 export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEFAULT_BACKTEST_START, lttiAsset = null, paxgAsset = null) {
@@ -411,7 +403,7 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEF
     ? lttiAsset.candles.map((c, i) => ({ time: c.time, signal: lttiAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+  const formulas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
   const formulaResults = formulas.map(f => {
     const result = runSingleFormula(
       f,
