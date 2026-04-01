@@ -6,7 +6,7 @@ const STORAGE_KEY = 'crypto-dashboard-fundamentals';
 const ONCHAIN_INDICATORS = [
   {
     id: 'iefp',
-    name: 'Inter-Exchange Flow Pulse',
+    name: 'Short-Term Holder MVRV',
     source: 'CryptoQuant',
     url: 'https://cryptoquant.com/analytics/query/65df235c0168b95f8eac8dca?v=65df235c0168b95f8eac8dcc',
     options: [
@@ -19,7 +19,7 @@ const ONCHAIN_INDICATORS = [
     id: 'sth_sopr',
     name: 'STH-SOPR',
     source: 'ChartInspect',
-    url: 'https://chartinspect.com/charts/sth-sopr',
+    url: 'https://chartinspect.com/charts/sth-sopr?smoothing=SMA-30d',
     options: [
       { value: '1', label: 'Bullish (+1)' },
       { value: '0', label: 'Neutral (0)' },
@@ -30,7 +30,7 @@ const ONCHAIN_INDICATORS = [
     id: 'sth_pl_momentum',
     name: 'STH Realized P/L Ratio Momentum',
     source: 'ChartInspect',
-    url: 'https://chartinspect.com/charts/sth-realized-pl-ratio-momentum',
+    url: 'https://chartinspect.com/charts/sth-realized-pl-ratio-momentum?chain=BTC&momentum=90d&unit=BTC&smoothing=SMA-90d',
     options: [
       { value: '1', label: 'Bullish (+1)' },
       { value: '0', label: 'Neutral (0)' },
@@ -171,7 +171,7 @@ export default function FundamentalsPanel() {
 
       {/* On-Chain Fundamentals - manual input */}
       <div className="section">
-        <h3 className="section-title">On-Chain Fundamentals (Manual Input)</h3>
+        <h3 className="section-title">Fundamental Indicators</h3>
         <div style={{
           background: 'var(--bg-card)', border: '1px solid var(--border)',
           borderRadius: 8, padding: 16,
@@ -184,6 +184,16 @@ export default function FundamentalsPanel() {
               }}>
                 <div style={{ flex: '1 1 200px' }}>
                   <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{ind.name}</div>
+                  {ind.id === 'sth_sopr' && (
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                      Smoothing: SMA 30 Days
+                    </div>
+                  )}
+                  {ind.id === 'sth_pl_momentum' && (
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                      Momentum: 90 Days · Smoothing: SMA 90 Days
+                    </div>
+                  )}
                   <a href={ind.url} target="_blank" rel="noreferrer"
                     style={{ fontSize: '0.7rem', color: 'var(--blue)' }}>
                     {ind.source} &rarr;

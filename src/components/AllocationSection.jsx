@@ -8,6 +8,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
   const navigate = useNavigate();
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
   const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
+  const [sortKey, setSortKey] = useState('overallRank');
 
   const activeDateStr = selectedPreset === 'custom' ? customDate : selectedPreset;
   const backtestStart = new Date(activeDateStr + 'T00:00:00Z').getTime();
@@ -28,6 +29,20 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     }
     return out;
   }, [data]);
+
+  const sortedComparison = useMemo(() => {
+    if (!data?.comparison) return [];
+    const rows = data.comparison.slice();
+    rows.sort((a, b) => {
+      const av = parseFloat(a[sortKey]);
+      const bv = parseFloat(b[sortKey]);
+      const aVal = isNaN(av) ? -Infinity : av;
+      const bVal = isNaN(bv) ? -Infinity : bv;
+      if (sortKey === 'overallRank') return aVal - bVal;
+      return bVal - aVal;
+    });
+    return rows;
+  }, [data, sortKey]);
 
   const btcBuyHold = useMemo(() => {
     if (!assetData || assetData.length === 0) return null;
@@ -97,15 +112,70 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
             <tr>
               <th>Strategy</th>
               <th>Description</th>
-              <th style={{ textAlign: 'right' }}>Total Return</th>
-              <th style={{ textAlign: 'right' }}>Max Drawdown</th>
-              <th style={{ textAlign: 'right' }}>Sortino</th>
-              <th style={{ textAlign: 'right' }}>Omega</th>
-              <th style={{ textAlign: 'right' }}>Overall Rank</th>
+              <th
+                style={{ textAlign: 'center', cursor: 'pointer' }}
+                title="Sort highest to lowest"
+                onClick={() => setSortKey('totalReturn')}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                  <span>Total Return</span>
+                  <span>&#9662;</span>
+                </div>
+              </th>
+              <th
+                style={{ textAlign: 'center', cursor: 'pointer' }}
+                title="Sort highest to lowest"
+                onClick={() => setSortKey('maxDrawdown')}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                  <span>Max Drawdown</span>
+                  <span>&#9662;</span>
+                </div>
+              </th>
+              <th
+                style={{ textAlign: 'center', cursor: 'pointer' }}
+                title="Sort highest to lowest"
+                onClick={() => setSortKey('sortino')}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                  <span>Sortino</span>
+                  <span>&#9662;</span>
+                </div>
+              </th>
+              <th
+                style={{ textAlign: 'center', cursor: 'pointer' }}
+                title="Sort highest to lowest"
+                onClick={() => setSortKey('omega')}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                  <span>Omega</span>
+                  <span>&#9662;</span>
+                </div>
+              </th>
+              <th
+                style={{ textAlign: 'center', cursor: 'pointer' }}
+                title="Sort highest to lowest"
+                onClick={() => setSortKey('kelly')}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                  <span>Kelly</span>
+                  <span>&#9662;</span>
+                </div>
+              </th>
+              <th
+                style={{ textAlign: 'center', cursor: 'pointer' }}
+                title="Sort highest to lowest"
+                onClick={() => setSortKey('overallRank')}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                  <span>Overall Rank</span>
+                  <span>&#9662;</span>
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {data.comparison.map(r => (
+            {sortedComparison.map(r => (
                 <tr
                   key={r.formula}
                   onClick={() => navigate(`/formula/${r.formula}`)}
@@ -122,6 +192,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                   <td style={{ textAlign: 'right' }}>{r.maxDrawdown}%</td>
                   <td style={{ textAlign: 'right' }}>{r.sortino}</td>
                   <td style={{ textAlign: 'right' }}>{r.omega}</td>
+                  <td style={{ textAlign: 'right' }}>{r.kelly}%</td>
                   <td style={{ textAlign: 'right', fontWeight: 600 }}>{r.overallRank}</td>
                 </tr>
             ))}

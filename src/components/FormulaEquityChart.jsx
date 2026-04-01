@@ -11,6 +11,11 @@ export const FORMULA_COLORS = {
   G: '#79c0ff',
   H: '#e3b341',
   I: '#56d364',
+  J: '#f78166',
+  K: '#a5d6ff',
+  L: '#b392f0',
+  M: '#6ee7b7',
+  N: '#ffd166',
 };
 
 const BH_COLOR = '#7B2D8E';
@@ -76,6 +81,7 @@ export default function FormulaEquityChart({ formulaEquities, buyHoldEquity }) {
       const bhSeries = chart.addSeries(LineSeries, {
         color: BH_COLOR,
         lineWidth: 2,
+        title: 'BH',
       });
       if (buyHoldEquity && buyHoldEquity.length > 0) {
         bhSeries.setData(buyHoldEquity.map(e => ({ time: e.time / 1000, value: e.value })));
@@ -90,6 +96,7 @@ export default function FormulaEquityChart({ formulaEquities, buyHoldEquity }) {
       const series = chart.addSeries(LineSeries, {
         color: FORMULA_COLORS[key] || '#8b949e',
         lineWidth: 2,
+        title: key,
       });
       series.setData(eq.map(e => ({ time: e.time / 1000, value: e.value })));
       seriesMapRef.current[key] = series;

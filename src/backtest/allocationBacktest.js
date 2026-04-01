@@ -42,8 +42,46 @@ function formulaLabel(f) {
     case 'G': return 'When LTTI is LONG allocate 50% BTC and 50% to Dominant Asset (fallback to most dominant LONG asset). CASH when LTTI is SHORT.';
     case 'H': return 'When LTTI is LONG allocate 50% BTC and 50% to best Overall Rank asset (fallback to next best LONG asset). CASH when LTTI is SHORT.';
     case 'I': return 'Strategy I logic (step-by-step): 1) If LTTI is SHORT, allocate 100% to CASH. 2) If LTTI is LONG, evaluate assets by dominance order and only consider assets that are currently LONG. 3) Exclude BNB and DOGE entirely from this strategy. 4) For each eligible non-BTC asset, proposed allocation = Kelly Criterion (using the hardcoded Kelly backtest window that starts on 1 Jan 2023), except HYPE which is forced to 10%. 5) Build the non-BTC sleeve in dominance order with a hard cap of 60% total for all non-BTC assets combined; do not rescale to force 60%, and if adding the next less-dominant eligible asset would breach 60%, skip/cut off that asset. 6) After the non-BTC sleeve is set, allocate BTC only if BTC is LONG. 7) If BTC is LONG, BTC receives the remaining portfolio weight (100% minus the non-BTC sleeve). 8) If BTC is not LONG, the remaining weight stays in CASH. BTC is not capped by Kelly in this strategy.';
+    case 'J': return 'Same as Strategy I, but when LTTI is SHORT and MTTI-BTC is LONG, allocate 50% to BTC (remaining 50% in CASH).';
+    case 'K': return 'Same as Strategy I, but include BNB and DOGE.';
+    case 'L': return 'Same as Strategy I, but with a non-BTC hard cap of 80%.';
+    case 'M': return 'Same as Strategy I, but with no non-BTC hard cap.';
+    case 'N': return 'Same as Strategy I, but do not use Kelly allocations. Use hardcoded caps in dominance order: BTC uncapped; total non-BTC cap 80%; SOL cap 60%; ETH cap 50%; SUI+HYPE joint cap 20%.';
     default: return f;
   }
+}
+
+function applyKellyDominanceAllocation({
+  weights,
+  addWeight,
+  longMask,
+  hasPrice,
+  dominanceOrder,
+  kellyFractions,
+  assetNames,
+  btcLong,
+  btcIdx,
+  includeBnbAndDoge = false,
+  nonBtcCap = 0.60,
+}) {
+  let nonBtcAllocated = 0;
+  for (const idx of dominanceOrder) {
+    if (!longMask[idx] || !hasPrice[idx]) continue;
+    const name = assetNames[idx];
+    if (!includeBnbAndDoge && (name === 'BNB' || name === 'DOGE')) continue;
+    if (name === 'BTC') continue;
+    let alloc = name === 'HYPE' ? 0.10 : (kellyFractions[idx] ?? 0);
+    if (!isFinite(alloc) || alloc <= 0) continue;
+    if (nonBtcCap !== null && nonBtcCap !== undefined) {
+      if (nonBtcAllocated + alloc > nonBtcCap) continue;
+    }
+    nonBtcAllocated += alloc;
+    addWeight(idx, alloc);
+  }
+  if (btcLong) {
+    addWeight(btcIdx, Math.max(0, 1.0 - nonBtcAllocated));
+  }
+  return nonBtcAllocated;
 }
 
 function pickFirstLong(order, longMask) {
@@ -134,18 +172,123 @@ function allocationForFormula(formula, ctx) {
       break;
     case 'I':
       if (lttiLong) {
+        applyKellyDominanceAllocation({
+          weights,
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          kellyFractions,
+          assetNames,
+          btcLong,
+          btcIdx,
+          includeBnbAndDoge: false,
+          nonBtcCap: 0.60,
+        });
+      }
+      break;
+    case 'J':
+      if (lttiLong) {
+        applyKellyDominanceAllocation({
+          weights,
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          kellyFractions,
+          assetNames,
+          btcLong,
+          btcIdx,
+          includeBnbAndDoge: false,
+          nonBtcCap: 0.60,
+        });
+      } else if (btcLong) {
+        addWeight(btcIdx, 0.50);
+      }
+      break;
+    case 'K':
+      if (lttiLong) {
+        applyKellyDominanceAllocation({
+          weights,
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          kellyFractions,
+          assetNames,
+          btcLong,
+          btcIdx,
+          includeBnbAndDoge: true,
+          nonBtcCap: 0.60,
+        });
+      }
+      break;
+    case 'L':
+      if (lttiLong) {
+        applyKellyDominanceAllocation({
+          weights,
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          kellyFractions,
+          assetNames,
+          btcLong,
+          btcIdx,
+          includeBnbAndDoge: false,
+          nonBtcCap: 0.80,
+        });
+      }
+      break;
+    case 'M':
+      if (lttiLong) {
+        applyKellyDominanceAllocation({
+          weights,
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          kellyFractions,
+          assetNames,
+          btcLong,
+          btcIdx,
+          includeBnbAndDoge: false,
+          nonBtcCap: null,
+        });
+      }
+      break;
+    case 'N':
+      if (lttiLong) {
         let nonBtcAllocated = 0;
+        let suiHypeAllocated = 0;
+
         for (const idx of dominanceOrder) {
           if (!longMask[idx] || !hasPrice[idx]) continue;
           const name = assetNames[idx];
-          if (name === 'BNB' || name === 'DOGE') continue;
-          if (name === 'BTC') continue;
-          let alloc = name === 'HYPE' ? 0.10 : (kellyFractions[idx] ?? 0);
+          if (name === 'BNB' || name === 'DOGE' || name === 'BTC') continue;
+
+          const remainingNonBtc = 0.80 - nonBtcAllocated;
+          if (remainingNonBtc <= 0) break;
+
+          let capForAsset = 0.80;
+          if (name === 'SOL') capForAsset = 0.60;
+          else if (name === 'ETH') capForAsset = 0.50;
+          else if (name === 'SUI' || name === 'HYPE') capForAsset = 0.20;
+
+          let alloc = Math.min(capForAsset, remainingNonBtc);
+
+          if (name === 'SUI' || name === 'HYPE') {
+            const remainingJoint = 0.20 - suiHypeAllocated;
+            if (remainingJoint <= 0) continue;
+            alloc = Math.min(alloc, remainingJoint);
+          }
+
           if (!isFinite(alloc) || alloc <= 0) continue;
-          if (nonBtcAllocated + alloc > 0.60) continue;
-          nonBtcAllocated += alloc;
           addWeight(idx, alloc);
+          nonBtcAllocated += alloc;
+          if (name === 'SUI' || name === 'HYPE') suiHypeAllocated += alloc;
         }
+
         if (btcLong) {
           addWeight(btcIdx, Math.max(0, 1.0 - nonBtcAllocated));
         }
@@ -291,6 +434,7 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
   let sharpe = NaN;
   let sortino = NaN;
   let omega = NaN;
+  let kelly = NaN;
 
   if (tradePnls.length >= 2) {
     const mean = tradePnls.reduce((s, v) => s + v, 0) / tradePnls.length;
@@ -312,6 +456,24 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
     omega = lossSum > 0 ? 1 + gains / lossSum : (gains > 0 ? Infinity : 1);
   }
 
+  if (tradePnls.length > 0) {
+    const winningTrades = tradePnls.filter(r => r > 0);
+    const losingTradesAbs = tradePnls.filter(r => r < 0).map(r => -r);
+    const p = winningTrades.length / tradePnls.length;
+    const q = 1 - p;
+
+    if (winningTrades.length === 0) {
+      kelly = -1;
+    } else if (losingTradesAbs.length === 0) {
+      kelly = 1;
+    } else {
+      const avgWin = winningTrades.reduce((s, v) => s + v, 0) / winningTrades.length;
+      const avgLoss = losingTradesAbs.reduce((s, v) => s + v, 0) / losingTradesAbs.length;
+      const b = avgLoss > 0 ? avgWin / avgLoss : NaN;
+      kelly = b > 0 ? p - (q / b) : NaN;
+    }
+  }
+
   const stats = {
     initialCapital: INITIAL_CAPITAL,
     finalEquity: finalEquity.toFixed(2),
@@ -326,6 +488,7 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
     sharpe: fmtRatio(sharpe),
     sortino: fmtRatio(sortino),
     omega: fmtRatio(omega),
+    kelly: isNaN(kelly) ? '--' : (kelly * 100).toFixed(2),
   };
 
   return {
@@ -339,7 +502,7 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
 }
 
 /**
- * Run full allocation analysis: compare all formulas (A-I),
+ * Run full allocation analysis: compare all formulas (A–N),
  * return asset table + equity curve + per-bar allocations for each.
  */
 export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEFAULT_BACKTEST_START, lttiAsset = null, paxgAsset = null) {
@@ -403,7 +566,7 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEF
     ? lttiAsset.candles.map((c, i) => ({ time: c.time, signal: lttiAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+  const formulas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N'];
   const formulaResults = formulas.map(f => {
     const result = runSingleFormula(
       f,
@@ -453,6 +616,7 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEF
     maxDrawdown: r.stats.maxDrawdown,
     sortino: r.sortino,
     omega: r.stats.omega,
+    kelly: r.stats.kelly ?? '--',
   }));
 
   const vals = {
@@ -460,14 +624,16 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEF
     maxDrawdown: comparison.map(r => parseFloat(r.maxDrawdown) || Infinity),
     sortino:     comparison.map(r => parseSortino(r.sortino)),
     omega:       comparison.map(r => parseSortino(r.omega)),
+    kelly:       comparison.map(r => parseFloat(r.kelly) || -Infinity),
   };
 
   const retRanks = rankDescending(vals.totalReturn);
   const ddRanks  = rankDescending(vals.maxDrawdown.map(v => -v));
   const sorRanks = rankDescending(vals.sortino);
   const omgRanks = rankDescending(vals.omega);
+  const kelRanks = rankDescending(vals.kelly);
 
-  const cumScores = comparison.map((_, i) => retRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i]);
+  const cumScores = comparison.map((_, i) => retRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i] + kelRanks[i]);
 
   const indices = comparison.map((_, i) => i);
   indices.sort((a, b) => cumScores[a] - cumScores[b]);

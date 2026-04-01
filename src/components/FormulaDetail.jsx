@@ -49,6 +49,18 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
     return { ...details.stats, buyHoldReturn: btcBuyHold?.bhReturn ?? '--' };
   }, [details, btcBuyHold]);
 
+  const maxNonBtcAllocation = useMemo(() => {
+    if (!details?.barAllocations || details.barAllocations.length === 0) return null;
+    let maxPct = 0;
+    for (const bar of details.barAllocations) {
+      const nonBtcPct = Object.entries(bar.weights || {})
+        .filter(([asset]) => asset !== 'BTC')
+        .reduce((sum, [, pct]) => sum + pct, 0);
+      if (nonBtcPct > maxPct) maxPct = nonBtcPct;
+    }
+    return maxPct;
+  }, [details]);
+
   if (loading) {
     return (
       <div className="loading">
@@ -121,6 +133,11 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
             />
           )}
         </div>
+        {(key === 'L' || key === 'M') && maxNonBtcAllocation !== null && (
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: -4 }}>
+            Max non-BTC allocation in selected window: {maxNonBtcAllocation.toFixed(2)}%
+          </div>
+        )}
       </div>
 
       <div className="section">
