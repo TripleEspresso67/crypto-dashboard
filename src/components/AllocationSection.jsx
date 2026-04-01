@@ -18,7 +18,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     const mttiAssets = assetData.filter(a => a.config.strategy !== 'LTTI');
     if (mttiAssets.length === 0) return null;
     const lttiAsset = assetData.find(a => a.config.strategy === 'LTTI') ?? null;
-    return runAllocationAnalysis(mttiAssets, ratioData.dominance, backtestStart, lttiAsset, paxgData);
+    return runAllocationAnalysis(mttiAssets, ratioData.dominance, ratioData.pairs, backtestStart, lttiAsset, paxgData);
   }, [assetData, ratioData, paxgData, backtestStart]);
 
   const formulaEquities = useMemo(() => {
@@ -103,9 +103,12 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
             />
           )}
         </div>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
           Portfolio backtest &mdash; CASH assets always receive 0% allocation.
           Click a formula to view its allocation breakdown and portfolio backtest.
+        </p>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+          Dominance-based strategies use time-based dominance, calculated bar-by-bar from the All Pair Ratios data.
         </p>
         <table className="score-table">
           <thead>

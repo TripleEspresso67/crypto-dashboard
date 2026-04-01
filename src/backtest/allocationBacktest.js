@@ -91,6 +91,70 @@ function pickFirstLong(order, longMask) {
   return -1;
 }
 
+function computeDominanceOrdersByTimeline(timeline, mttiAssets, ratioPairs, fallbackOrder) {
+  if (!ratioPairs || ratioPairs.length === 0) {
+    return timeline.map(() => fallbackOrder);
+  }
+
+  const assetNames = mttiAssets.map(a => a.config.name);
+  const assetSet = new Set(assetNames);
+  const relevantPairs = ratioPairs
+    .filter(p => assetSet.has(p.numerator) && assetSet.has(p.denominator))
+    .map(p => ({
+      numerator: p.numerator,
+      denominator: p.denominator,
+      candles: p.candles || [],
+      signals: p.signals || [],
+      ptr: 0,
+      currentSignal: null,
+    }));
+
+  if (relevantPairs.length === 0) {
+    return timeline.map(() => fallbackOrder);
+  }
+
+  const orders = [];
+  for (const t of timeline) {
+    const wins = {};
+    const losses = {};
+    for (const name of assetNames) {
+      wins[name] = 0;
+      losses[name] = 0;
+    }
+
+    for (const pair of relevantPairs) {
+      while (
+        pair.ptr < pair.candles.length &&
+        pair.ptr < pair.signals.length &&
+        pair.candles[pair.ptr].time <= t
+      ) {
+        pair.currentSignal = pair.signals[pair.ptr];
+        pair.ptr += 1;
+      }
+      if (!pair.currentSignal) continue;
+
+      if (pair.currentSignal === 'LONG') {
+        wins[pair.numerator] += 1;
+        losses[pair.denominator] += 1;
+      } else {
+        wins[pair.denominator] += 1;
+        losses[pair.numerator] += 1;
+      }
+    }
+
+    const order = assetNames
+      .map((name, i) => ({ i, name, score: wins[name] - losses[name] }))
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.name.localeCompare(b.name);
+      })
+      .map(x => x.i);
+    orders.push(order);
+  }
+
+  return orders;
+}
+
 function computeAssetOverallRanks(assetBacktests) {
   const totalReturnVals = assetBacktests.map(b => parseFloat(b?.stats?.totalReturn) || -Infinity);
   const maxDrawdownVals = assetBacktests.map(b => parseFloat(b?.stats?.maxDrawdown) || Infinity);
@@ -299,7 +363,7 @@ function allocationForFormula(formula, ctx) {
   return { weights, paxgWeight };
 }
 
-function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrder, overallOrder, lttiSignals, btcIdx, paxgMap, kellyFractions) {
+function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrdersByIndex, overallOrder, lttiSignals, btcIdx, paxgMap, kellyFractions) {
   const INITIAL_CAPITAL = 1000;
   const n = mttiAssets.length;
   let portfolioValue = INITIAL_CAPITAL;
@@ -329,6 +393,7 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
     const hasPrice = closeMaps.map(m => m.has(currTime));
     const hasPaxgPrice = Boolean(paxgMap?.has(currTime));
     const longMask = mttiAssets.map((_, i) => hasPrice[i] && closeMaps[i].get(currTime).signal === 'LONG');
+    const dominanceOrder = dominanceOrdersByIndex[t] || [];
     const btcLong = btcIdx >= 0 && longMask[btcIdx];
     const dominantLongIdx = pickFirstLong(dominanceOrder, longMask);
     const rankedLongIdx = pickFirstLong(overallOrder, longMask);
@@ -505,7 +570,7 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
  * Run full allocation analysis: compare all formulas (A–N),
  * return asset table + equity curve + per-bar allocations for each.
  */
-export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEFAULT_BACKTEST_START, lttiAsset = null, paxgAsset = null) {
+export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtestStart = DEFAULT_BACKTEST_START, lttiAsset = null, paxgAsset = null) {
   const n = mttiAssets.length;
   if (n === 0) return null;
 
@@ -531,7 +596,7 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEF
     const d = dominance?.[a.config.name];
     return d ? d.wins - d.losses : 0;
   });
-  const dominanceOrder = domScores.map((_, i) => i).sort((a, b) => domScores[b] - domScores[a]);
+  const fallbackDominanceOrder = domScores.map((_, i) => i).sort((a, b) => domScores[b] - domScores[a]);
   const overallRanks = computeAssetOverallRanks(assetBacktests);
   const overallOrder = overallRanks.map((_, i) => i).sort((a, b) => overallRanks[a] - overallRanks[b]);
 
@@ -561,6 +626,13 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEF
 
   if (timeline.length < 2) return null;
 
+  const dominanceOrdersByIndex = computeDominanceOrdersByTimeline(
+    timeline,
+    mttiAssets,
+    ratioPairs,
+    fallbackDominanceOrder
+  );
+
   const btcMttiIdx = mttiAssets.findIndex(a => a.config.strategy === 'MTTI-BTC');
   const lttiSignals = lttiAsset
     ? lttiAsset.candles.map((c, i) => ({ time: c.time, signal: lttiAsset.signals[i] }))
@@ -573,7 +645,7 @@ export function runAllocationAnalysis(mttiAssets, dominance, backtestStart = DEF
       timeline,
       closeMaps,
       mttiAssets,
-      dominanceOrder,
+      dominanceOrdersByIndex,
       overallOrder,
       lttiSignals ?? [],
       btcMttiIdx,

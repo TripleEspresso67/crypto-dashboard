@@ -20,7 +20,7 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
     const mttiAssets = assetData.filter(a => a.config.strategy !== 'LTTI');
     if (mttiAssets.length === 0) return null;
     const lttiAsset = assetData.find(a => a.config.strategy === 'LTTI') ?? null;
-    return runAllocationAnalysis(mttiAssets, ratioData.dominance, backtestStart, lttiAsset, paxgData);
+    return runAllocationAnalysis(mttiAssets, ratioData.dominance, ratioData.pairs, backtestStart, lttiAsset, paxgData);
   }, [assetData, ratioData, paxgData, backtestStart]);
 
   const details = data?.formulaDetails?.[key];
