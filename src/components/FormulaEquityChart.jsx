@@ -21,9 +21,7 @@ export const FORMULA_COLORS = {
   Q: '#c4b5fd',
 };
 
-const BH_COLOR = '#7B2D8E';
-
-export default function FormulaEquityChart({ formulaEquities, buyHoldEquity }) {
+export default function FormulaEquityChart({ formulaEquities }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesMapRef = useRef({});
@@ -79,19 +77,6 @@ export default function FormulaEquityChart({ formulaEquities, buyHoldEquity }) {
     }
     seriesMapRef.current = {};
 
-    const hasStrategyA = Object.prototype.hasOwnProperty.call(formulaEquities, 'A');
-    if (!hasStrategyA) {
-      const bhSeries = chart.addSeries(LineSeries, {
-        color: BH_COLOR,
-        lineWidth: 2,
-        title: 'BH',
-      });
-      if (buyHoldEquity && buyHoldEquity.length > 0) {
-        bhSeries.setData(buyHoldEquity.map(e => ({ time: e.time / 1000, value: e.value })));
-      }
-      seriesMapRef.current.BH = bhSeries;
-    }
-
     const formulaKeys = Object.keys(formulaEquities);
     for (const key of formulaKeys) {
       const eq = formulaEquities[key];
@@ -109,7 +94,7 @@ export default function FormulaEquityChart({ formulaEquities, buyHoldEquity }) {
       chart.timeScale().fitContent();
       hasInitialFit.current = true;
     }
-  }, [formulaEquities, buyHoldEquity]);
+  }, [formulaEquities]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -120,8 +105,6 @@ export default function FormulaEquityChart({ formulaEquities, buyHoldEquity }) {
   }, []);
 
   const legendKeys = Object.keys(formulaEquities || {});
-  const hasStrategyA = legendKeys.includes('A');
-
   return (
     <div style={{ position: 'relative' }}>
       <div ref={containerRef} className="chart-container" />
@@ -138,15 +121,6 @@ export default function FormulaEquityChart({ formulaEquities, buyHoldEquity }) {
             <span style={{ color: '#8b949e' }}>{key}</span>
           </span>
         ))}
-        {!hasStrategyA && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{
-              display: 'inline-block', width: 14, height: 3,
-              background: BH_COLOR, borderRadius: 1,
-            }} />
-            <span style={{ color: '#8b949e' }}>BTC B&amp;H</span>
-          </span>
-        )}
       </div>
       <button
         onClick={resetView}

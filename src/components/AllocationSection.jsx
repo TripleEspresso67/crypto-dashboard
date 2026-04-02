@@ -9,7 +9,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
   const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
   const [sortKey, setSortKey] = useState('overallRank');
-  const [visibleFormulas, setVisibleFormulas] = useState(['A', 'B']);
+  const [visibleFormulas, setVisibleFormulas] = useState(['A']);
   const [favoriteFormula, setFavoriteFormula] = useState(() => {
     try {
       const saved = localStorage.getItem('favoriteAllocationStrategy');
@@ -59,28 +59,11 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     setVisibleFormulas(prev => {
       const filtered = prev.filter(f => available.has(f));
       if (filtered.length > 0) return filtered;
-      const defaults = ['A', 'B'].filter(f => available.has(f));
+      const defaults = ['A'].filter(f => available.has(f));
       if (defaults.length > 0) return defaults;
       return data.comparison.length > 0 ? [data.comparison[0].formula] : [];
     });
   }, [data]);
-
-  const btcBuyHold = useMemo(() => {
-    if (!assetData || assetData.length === 0) return null;
-    const btcAsset = assetData.find(a => a.config.strategy === 'MTTI-BTC');
-    if (!btcAsset) return null;
-    const candles = btcAsset.candles;
-    const startIdx = candles.findIndex(c => c.time >= backtestStart);
-    if (startIdx === -1) return null;
-    const firstClose = candles[startIdx].close;
-    if (firstClose === 0) return null;
-    const initialCapital = 1000;
-    const equity = candles.slice(startIdx).map(c => ({
-      time: c.time,
-      value: initialCapital * (c.close / firstClose),
-    }));
-    return { equity };
-  }, [assetData, backtestStart]);
 
   if (!data) return null;
 
@@ -247,7 +230,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                         border: 'none',
                         background: 'transparent',
                         cursor: 'pointer',
-                        color: visibleFormulas.includes(r.formula) ? '#58a6ff' : '#4b5563',
+                        color: visibleFormulas.includes(r.formula) ? '#e3b341' : '#4b5563',
                         fontSize: '1rem',
                         lineHeight: 1,
                         padding: 0,
@@ -285,7 +268,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                         border: 'none',
                         background: 'transparent',
                         cursor: 'pointer',
-                        color: favoriteFormula === r.formula ? '#e3b341' : '#8b949e',
+                        color: favoriteFormula === r.formula ? '#ffffff' : '#8b949e',
                         fontSize: '1.6rem',
                         lineHeight: 1,
                         padding: 0,
@@ -316,7 +299,6 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
         <h3 className="section-title">Allocation Strategy Equity Comparison</h3>
         <FormulaEquityChart
           formulaEquities={visibleFormulaEquities}
-          buyHoldEquity={btcBuyHold?.equity}
         />
       </div>
     </>
