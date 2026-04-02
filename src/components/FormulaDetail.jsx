@@ -96,7 +96,7 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
       <div className="detail-header">
         <div>
           <h2>Formula {key}</h2>
-          <span style={{ fontSize: key === 'I' ? '0.8rem' : '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+          <span style={{ fontSize: ['I', 'O', 'P', 'Q'].includes(key) ? '0.8rem' : '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
             {formulaInfo.label}
           </span>
         </div>

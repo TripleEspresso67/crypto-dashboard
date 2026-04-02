@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { runAllocationAnalysis } from '../backtest/allocationBacktest';
 import { DEFAULT_BACKTEST_START_DATE, BACKTEST_DATE_PRESETS } from '../constants/backtestDates';
@@ -9,6 +9,15 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
   const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
   const [sortKey, setSortKey] = useState('overallRank');
+  const [visibleFormulas, setVisibleFormulas] = useState(['A', 'B']);
+  const [favoriteFormula, setFavoriteFormula] = useState(() => {
+    try {
+      const saved = localStorage.getItem('favoriteAllocationStrategy');
+      return saved || null;
+    } catch (_) {
+      return null;
+    }
+  });
 
   const activeDateStr = selectedPreset === 'custom' ? customDate : selectedPreset;
   const backtestStart = new Date(activeDateStr + 'T00:00:00Z').getTime();
@@ -44,6 +53,18 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     return rows;
   }, [data, sortKey]);
 
+  useEffect(() => {
+    if (!data?.comparison || data.comparison.length === 0) return;
+    const available = new Set(data.comparison.map(r => r.formula));
+    setVisibleFormulas(prev => {
+      const filtered = prev.filter(f => available.has(f));
+      if (filtered.length > 0) return filtered;
+      const defaults = ['A', 'B'].filter(f => available.has(f));
+      if (defaults.length > 0) return defaults;
+      return data.comparison.length > 0 ? [data.comparison[0].formula] : [];
+    });
+  }, [data]);
+
   const btcBuyHold = useMemo(() => {
     if (!assetData || assetData.length === 0) return null;
     const btcAsset = assetData.find(a => a.config.strategy === 'MTTI-BTC');
@@ -68,6 +89,32 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     setSelectedPreset(val);
     if (val !== 'custom') setCustomDate(val);
   }
+
+  function toggleFavorite(formula) {
+    const next = favoriteFormula === formula ? null : formula;
+    setFavoriteFormula(next);
+    try {
+      if (next) localStorage.setItem('favoriteAllocationStrategy', next);
+      else localStorage.removeItem('favoriteAllocationStrategy');
+    } catch (_) {
+      // Ignore storage failures and keep in-memory state.
+    }
+  }
+
+  function toggleFormulaVisibility(formula) {
+    setVisibleFormulas(prev => {
+      if (prev.includes(formula)) return prev.filter(f => f !== formula);
+      return [...prev, formula];
+    });
+  }
+
+  const visibleFormulaEquities = useMemo(() => {
+    const out = {};
+    for (const key of visibleFormulas) {
+      if (formulaEquities[key]) out[key] = formulaEquities[key];
+    }
+    return out;
+  }, [formulaEquities, visibleFormulas]);
 
   return (
     <>
@@ -113,6 +160,8 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
         <table className="score-table">
           <thead>
             <tr>
+              <th style={{ textAlign: 'center' }} title="Show or hide strategy on chart">Plot</th>
+              <th style={{ textAlign: 'center' }} title="Favorite strategy">Star</th>
               <th>Strategy</th>
               <th>Description</th>
               <th
@@ -185,10 +234,70 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                   style={{ cursor: 'pointer' }}
                   className="clickable-row"
                 >
+                  <td style={{ textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation();
+                        toggleFormulaVisibility(r.formula);
+                      }}
+                      title={visibleFormulas.includes(r.formula) ? 'Hide strategy from chart' : 'Show strategy on chart'}
+                      aria-label={visibleFormulas.includes(r.formula) ? `Hide strategy ${r.formula} from chart` : `Show strategy ${r.formula} on chart`}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        color: visibleFormulas.includes(r.formula) ? '#58a6ff' : '#4b5563',
+                        fontSize: '1rem',
+                        lineHeight: 1,
+                        padding: 0,
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <svg width="19.2" height="19.2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M12 2a7 7 0 0 0-4.7 12.2c1 .9 1.7 2 1.9 3.3h5.6c.2-1.3.9-2.4 1.9-3.3A7 7 0 0 0 12 2Z"
+                          fill="currentColor"
+                        />
+                        <path
+                          d="M9.5 19h5M10.2 21h3.6"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.6"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </button>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation();
+                        toggleFavorite(r.formula);
+                      }}
+                      title={favoriteFormula === r.formula ? 'Unstar strategy' : 'Star strategy'}
+                      aria-label={favoriteFormula === r.formula ? `Unstar strategy ${r.formula}` : `Star strategy ${r.formula}`}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        color: favoriteFormula === r.formula ? '#e3b341' : '#8b949e',
+                        fontSize: '1.6rem',
+                        lineHeight: 1,
+                        padding: 0,
+                      }}
+                    >
+                      {favoriteFormula === r.formula ? '★' : '☆'}
+                    </button>
+                  </td>
                   <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                     <span style={{ color: FORMULA_COLORS[r.formula] || 'inherit' }}>{r.formula}</span>
                   </td>
-                  <td style={{ fontSize: r.formula === 'I' ? '0.72rem' : '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                  <td style={{ fontSize: ['I', 'O', 'P', 'Q'].includes(r.formula) ? '0.72rem' : '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
                     {r.label}
                   </td>
                   <td style={{ textAlign: 'right' }}>{r.totalReturn}%</td>
@@ -206,7 +315,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
       <div className="section">
         <h3 className="section-title">Allocation Strategy Equity Comparison</h3>
         <FormulaEquityChart
-          formulaEquities={formulaEquities}
+          formulaEquities={visibleFormulaEquities}
           buyHoldEquity={btcBuyHold?.equity}
         />
       </div>

@@ -7,6 +7,17 @@ export default function RatiosTable({ ratioData }) {
 
   const { pairs, dominance } = ratioData;
 
+  // Approximate market-cap ordering for tie-breaks in Dominant Asset display.
+  const MARKET_CAP_RANK = {
+    BTC: 1,
+    ETH: 2,
+    BNB: 3,
+    SOL: 4,
+    DOGE: 5,
+    SUI: 6,
+    HYPE: 7,
+  };
+
   const dominanceList = Object.entries(dominance)
     .map(([name, d]) => ({
       name,
@@ -16,7 +27,17 @@ export default function RatiosTable({ ratioData }) {
     }))
     .sort((a, b) => b.score - a.score);
 
-  const topAsset = dominanceList[0];
+  const topScore = dominanceList[0]?.score ?? null;
+  const topAssets = topScore === null
+    ? []
+    : dominanceList
+      .filter(d => d.score === topScore)
+      .sort((a, b) => {
+        const rankA = MARKET_CAP_RANK[a.name] ?? Number.POSITIVE_INFINITY;
+        const rankB = MARKET_CAP_RANK[b.name] ?? Number.POSITIVE_INFINITY;
+        if (rankA !== rankB) return rankA - rankB;
+        return a.name.localeCompare(b.name);
+      });
 
   function signalClass(sig) {
     if (sig === 'LONG') return 'long';
@@ -43,11 +64,14 @@ export default function RatiosTable({ ratioData }) {
           border: '1px solid var(--border)', borderRadius: 8
         }}>
           <span style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--green)' }}>
-            {topAsset.name}
+            {topAssets.map(a => a.name).join(', ')}
           </span>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-            <div>Outperforming {topAsset.wins} pairs, underperforming {topAsset.losses}</div>
-            <div>Score: {topAsset.score}</div>
+            {topAssets.map(asset => (
+              <div key={asset.name}>
+                {asset.name}: Outperforming {asset.wins} pairs, underperforming {asset.losses}, score {asset.score}
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -16,6 +16,9 @@ export const FORMULA_COLORS = {
   L: '#b392f0',
   M: '#6ee7b7',
   N: '#ffd166',
+  O: '#ff9e64',
+  P: '#4dd0e1',
+  Q: '#c4b5fd',
 };
 
 const BH_COLOR = '#7B2D8E';
