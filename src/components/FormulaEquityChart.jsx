@@ -21,6 +21,11 @@ export const FORMULA_COLORS = {
   Q: '#c4b5fd',
 };
 
+const getChartHeight = () => {
+  const viewport = window.innerHeight || 800;
+  return Math.max(240, Math.min(380, Math.floor(viewport * 0.42)));
+};
+
 export default function FormulaEquityChart({ formulaEquities }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -44,7 +49,7 @@ export default function FormulaEquityChart({ formulaEquities }) {
         horzLines: { color: '#30363d' },
       },
       width: containerRef.current.clientWidth,
-      height: 350,
+      height: getChartHeight(),
       timeScale: { timeVisible: false },
       crosshair: { mode: 0 },
       rightPriceScale: { borderColor: '#30363d' },
@@ -55,12 +60,18 @@ export default function FormulaEquityChart({ formulaEquities }) {
 
     const handleResize = () => {
       if (containerRef.current) {
-        chart.applyOptions({ width: containerRef.current.clientWidth });
+        chart.applyOptions({
+          width: containerRef.current.clientWidth,
+          height: getChartHeight(),
+        });
       }
     };
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(containerRef.current);
     window.addEventListener('resize', handleResize);
 
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
       chart.remove();
       chartRef.current = null;

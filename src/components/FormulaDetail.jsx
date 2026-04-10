@@ -73,7 +73,7 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
   if (!details || !formulaInfo) {
     return (
       <div className="detail-page">
-        <span className="back-link" onClick={() => navigate('/')}>
+        <span className="back-link" onClick={() => navigate('/allocation')}>
           &larr; Crypto Strategy Dashboard
         </span>
         <div className="error-msg">Formula &ldquo;{key}&rdquo; not found.</div>
@@ -89,7 +89,7 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
 
   return (
     <div className="detail-page">
-      <span className="back-link" onClick={() => navigate('/')}>
+      <span className="back-link" onClick={() => navigate('/allocation')}>
         &larr; Crypto Strategy Dashboard
       </span>
 
@@ -103,18 +103,12 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
       </div>
 
       <div className="section">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            Backtest from:
-          </label>
+        <div className="controls-row">
+          <label className="control-label">Backtest from:</label>
           <select
             value={selectedPreset}
             onChange={handlePresetChange}
-            style={{
-              padding: '5px 10px', fontSize: '0.8rem',
-              background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-              border: '1px solid var(--border)', borderRadius: 4,
-            }}
+            className="control-input"
           >
             {BACKTEST_DATE_PRESETS.map(p => (
               <option key={p.value} value={p.value}>{p.label}</option>
@@ -125,11 +119,7 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
               type="date"
               value={customDate}
               onChange={e => setCustomDate(e.target.value)}
-              style={{
-                padding: '5px 10px', fontSize: '0.8rem',
-                background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                border: '1px solid var(--border)', borderRadius: 4,
-              }}
+              className="control-input"
             />
           )}
         </div>
@@ -142,36 +132,38 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
 
       <div className="section">
         <h3 className="section-title">Allocation</h3>
-        <table className="score-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Asset</th>
-              <th style={{ textAlign: 'right' }}>Sortino</th>
-              <th style={{ textAlign: 'center' }}>Signal</th>
-              <th style={{ textAlign: 'right' }}>Dominance Score</th>
-              <th style={{ textAlign: 'right' }}>Allocation</th>
-            </tr>
-          </thead>
-          <tbody>
-            {details.assetTable.map((a, idx) => (
-              <tr key={a.name}>
-                <td>{idx + 1}</td>
-                <td style={{ fontWeight: 600 }}>{a.name}</td>
-                <td style={{ textAlign: 'right' }}>{a.sortino}</td>
-                <td style={{ textAlign: 'center' }}>
-                  <span className={`signal-badge ${a.signal.toLowerCase()}`}>
-                    {a.signal}
-                  </span>
-                </td>
-                <td style={{ textAlign: 'right' }}>{a.domScore}</td>
-                <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                  {a.allocation.toFixed(1)}%
-                </td>
+        <div className="table-scroll">
+          <table className="score-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Asset</th>
+                <th style={{ textAlign: 'right' }}>Sortino</th>
+                <th style={{ textAlign: 'center' }}>Signal</th>
+                <th style={{ textAlign: 'right' }}>Dominance Score</th>
+                <th style={{ textAlign: 'right' }}>Allocation</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {details.assetTable.map((a, idx) => (
+                <tr key={a.name}>
+                  <td>{idx + 1}</td>
+                  <td style={{ fontWeight: 600 }}>{a.name}</td>
+                  <td style={{ textAlign: 'right' }}>{a.sortino}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span className={`signal-badge ${a.signal.toLowerCase()}`}>
+                      {a.signal}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>{a.domScore}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                    {a.allocation.toFixed(1)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="section">

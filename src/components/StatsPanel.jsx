@@ -6,7 +6,7 @@ export default function StatsPanel({ stats }) {
     { label: 'Final Equity', value: `$${stats.finalEquity}` },
     { label: 'Total Return', value: `${stats.totalReturn}%` },
     { label: 'Buy & Hold Return', value: `${stats.buyHoldReturn}%` },
-    { label: 'Total Trades', value: stats.totalTrades },
+    { label: 'Number of Trades', value: stats.numberOfTrades ?? stats.totalTrades },
     { label: 'Wins / Losses', value: `${stats.wins} / ${stats.losses}` },
     { label: 'Win Rate', value: `${stats.winRate}%` },
     { label: 'Max Drawdown', value: `${stats.maxDrawdown}%` },

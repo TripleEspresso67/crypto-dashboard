@@ -60,7 +60,7 @@ export default function RatioDetail({ ratioData, loading }) {
   if (!pair) {
     return (
       <div className="detail-page">
-        <span className="back-link" onClick={() => navigate('/')}>
+        <span className="back-link" onClick={() => navigate('/ratios')}>
           &larr; Crypto Strategy Dashboard
         </span>
         <div className="error-msg">Ratio pair not found.</div>
@@ -82,7 +82,7 @@ export default function RatioDetail({ ratioData, loading }) {
 
   return (
     <div className="detail-page">
-      <span className="back-link" onClick={() => navigate('/')}>
+      <span className="back-link" onClick={() => navigate('/ratios')}>
         &larr; Crypto Strategy Dashboard
       </span>
 
@@ -131,18 +131,12 @@ export default function RatioDetail({ ratioData, loading }) {
           <h3 className="section-title" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>
             Backtest Performance
           </h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Backtest from:
-            </label>
+          <div className="controls-row" style={{ marginBottom: 0 }}>
+            <label className="control-label">Backtest from:</label>
             <select
               value={selectedPreset}
               onChange={handlePresetChange}
-              style={{
-                padding: '5px 10px', fontSize: '0.8rem',
-                background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                border: '1px solid var(--border)', borderRadius: 4,
-              }}
+              className="control-input"
             >
               {BACKTEST_DATE_PRESETS.map(p => (
                 <option key={p.value} value={p.value}>{p.label}</option>
@@ -153,11 +147,7 @@ export default function RatioDetail({ ratioData, loading }) {
                 type="date"
                 value={customDate}
                 onChange={e => setCustomDate(e.target.value)}
-                style={{
-                  padding: '5px 10px', fontSize: '0.8rem',
-                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                  border: '1px solid var(--border)', borderRadius: 4,
-                }}
+                className="control-input"
               />
             )}
           </div>

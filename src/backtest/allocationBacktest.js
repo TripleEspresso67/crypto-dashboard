@@ -127,6 +127,17 @@ function pickFirstLong(order, longMask) {
   return -1;
 }
 
+function allocationsChanged(prevWeights, nextWeights, prevPaxgWeight, nextPaxgWeight, epsilon = 1e-10) {
+  if (Math.abs((prevPaxgWeight || 0) - (nextPaxgWeight || 0)) > epsilon) return true;
+  const n = Math.max(prevWeights?.length || 0, nextWeights?.length || 0);
+  for (let i = 0; i < n; i++) {
+    const prev = prevWeights?.[i] || 0;
+    const next = nextWeights?.[i] || 0;
+    if (Math.abs(prev - next) > epsilon) return true;
+  }
+  return false;
+}
+
 function computeDominanceOrdersByTimeline(timeline, mttiAssets, ratioPairs, fallbackOrder) {
   if (!ratioPairs || ratioPairs.length === 0) {
     return timeline.map(() => fallbackOrder);
@@ -484,6 +495,8 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
   let currentLttiSignal = 'CASH';
   let prevWeights = new Array(n).fill(0);
   let prevPaxgWeight = 0;
+  let allocationChangeTrades = 0;
+  let hasPrevAllocation = false;
 
   for (let t = 0; t < timeline.length; t++) {
     const currTime = timeline[t];
@@ -574,6 +587,13 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
       inTrade = false;
     }
 
+    if (!hasPrevAllocation) {
+      if (invested) allocationChangeTrades += 1;
+      hasPrevAllocation = true;
+    } else if (allocationsChanged(prevWeights, currentWeights, prevPaxgWeight, paxgWeight)) {
+      allocationChangeTrades += 1;
+    }
+
     prevWeights = currentWeights;
     prevPaxgWeight = paxgWeight;
   }
@@ -648,6 +668,7 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
     totalReturn: totalReturn.toFixed(2),
     buyHoldReturn: '--',
     totalTrades: tradeDetails.length,
+    numberOfTrades: allocationChangeTrades,
     wins,
     losses,
     winRate: winRate.toFixed(1),
@@ -788,6 +809,7 @@ export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtes
     formula: r.formula,
     label: r.label,
     totalReturn: r.totalReturn,
+    totalTrades: r.stats.numberOfTrades ?? r.stats.totalTrades,
     maxDrawdown: r.stats.maxDrawdown,
     sortino: r.sortino,
     omega: r.stats.omega,
@@ -796,6 +818,7 @@ export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtes
 
   const vals = {
     totalReturn: comparison.map(r => parseFloat(r.totalReturn) || -Infinity),
+    totalTrades: comparison.map(r => parseFloat(r.totalTrades) || -Infinity),
     maxDrawdown: comparison.map(r => parseFloat(r.maxDrawdown) || Infinity),
     sortino:     comparison.map(r => parseSortino(r.sortino)),
     omega:       comparison.map(r => parseSortino(r.omega)),
@@ -803,12 +826,13 @@ export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtes
   };
 
   const retRanks = rankDescending(vals.totalReturn);
+  const trdRanks = rankDescending(vals.totalTrades);
   const ddRanks  = rankDescending(vals.maxDrawdown.map(v => -v));
   const sorRanks = rankDescending(vals.sortino);
   const omgRanks = rankDescending(vals.omega);
   const kelRanks = rankDescending(vals.kelly);
 
-  const cumScores = comparison.map((_, i) => retRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i] + kelRanks[i]);
+  const cumScores = comparison.map((_, i) => retRanks[i] + trdRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i] + kelRanks[i]);
 
   const indices = comparison.map((_, i) => i);
   indices.sort((a, b) => cumScores[a] - cumScores[b]);

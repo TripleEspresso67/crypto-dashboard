@@ -5,6 +5,10 @@ import { DEFAULT_BACKTEST_START } from '../backtest/engine';
 const LONG_COLOR = '#58a6ff';
 const CASH_COLOR = '#e6edf3';
 const NEUTRAL_COLOR = '#6e7681';
+const getChartHeight = () => {
+  const viewport = window.innerHeight || 800;
+  return Math.max(240, Math.min(420, Math.floor(viewport * 0.48)));
+};
 
 function buildChartData(candles, signals, backtestStart) {
   const chartData = [];
@@ -105,7 +109,7 @@ export default function PriceChart({
         horzLines: { color: '#30363d' },
       },
       width: containerRef.current.clientWidth,
-      height: 400,
+      height: getChartHeight(),
       timeScale: { timeVisible: false },
       crosshair: { mode: 0 },
     });
@@ -134,12 +138,18 @@ export default function PriceChart({
 
     const handleResize = () => {
       if (containerRef.current) {
-        chart.applyOptions({ width: containerRef.current.clientWidth });
+        chart.applyOptions({
+          width: containerRef.current.clientWidth,
+          height: getChartHeight(),
+        });
       }
     };
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(containerRef.current);
     window.addEventListener('resize', handleResize);
 
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
       if (markersRef.current) {
         markersRef.current.detach();
@@ -208,14 +218,14 @@ export default function PriceChart({
       <div
         ref={scoreBarRef}
         style={{
-          fontSize: '0.68rem',
+          fontSize: '0.72rem',
           color: '#6e7681',
           padding: '4px 8px',
-          minHeight: '1.4em',
+          minHeight: '2.2em',
           fontFamily: 'monospace',
-          whiteSpace: 'nowrap',
+          whiteSpace: 'normal',
           overflow: 'hidden',
-          textOverflow: 'ellipsis',
+          lineHeight: 1.3,
         }}
       />
       <button

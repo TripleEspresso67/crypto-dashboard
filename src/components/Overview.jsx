@@ -5,9 +5,6 @@ import { MTTI_BTC_PARAMS } from '../strategies/mttiBtcConfig';
 import { MTTI_OTHERS_PARAMS } from '../strategies/mttiOthersConfig';
 import { LTTI_PARAMS } from '../strategies/lttiConfig';
 import { BACKTEST_DATE_PRESETS, DEFAULT_BACKTEST_START_DATE } from '../constants/backtestDates';
-import RatiosTable from './RatiosTable';
-import FundamentalsPanel from './FundamentalsPanel';
-import AllocationSection from './AllocationSection';
 
 function rankDescending(values) {
   const indices = values.map((_, i) => i);
@@ -28,7 +25,7 @@ const STRATEGY_PARAMS = {
   'MTTI-others': MTTI_OTHERS_PARAMS,
 };
 
-export default function Overview({ assetData, ratioData, paxgData, loading, error }) {
+export default function Overview({ assetData, loading, error }) {
   const navigate = useNavigate();
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
   const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
@@ -179,18 +176,12 @@ export default function Overview({ assetData, ratioData, paxgData, loading, erro
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
           >
             <h3 style={{ margin: 0, fontSize: 'inherit', fontWeight: 'inherit' }}>Asset Strategy Performance</h3>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Backtest from
+            <label className="controls-row" style={{ marginBottom: 0 }}>
+              <span className="control-label">Backtest from</span>
               <select
                 value={selectedPreset}
                 onChange={handlePresetChange}
-                style={{
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-primary)',
-                  borderRadius: 6,
-                  padding: '4px 8px',
-                }}
+                className="control-input"
               >
                 {BACKTEST_DATE_PRESETS.map(p => (
                   <option key={p.value} value={p.value}>{p.label}</option>
@@ -201,59 +192,49 @@ export default function Overview({ assetData, ratioData, paxgData, loading, erro
                   type="date"
                   value={customDate}
                   onChange={(e) => setCustomDate(e.target.value)}
-                  style={{
-                    background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-primary)',
-                    borderRadius: 6,
-                    padding: '4px 8px',
-                  }}
+                  className="control-input"
                 />
               )}
             </label>
           </div>
-          <table className="score-table">
-            <thead>
-              <tr>
-                <th>Asset</th>
-                <th>Strategy</th>
-                <th style={{ textAlign: 'right' }}>Total Return</th>
-                <th style={{ textAlign: 'right' }}>Max Drawdown</th>
-                <th style={{ textAlign: 'right' }}>Sortino</th>
-                <th style={{ textAlign: 'right' }}>Omega</th>
-                <th style={{ textAlign: 'right' }}>Kelly</th>
-                <th style={{ textAlign: 'right' }}>Overall Rank</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assetPerf.map(r => (
-                <tr
-                  key={r.idx}
-                  onClick={() => navigate(`/asset/${r.idx}`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <td style={{ fontWeight: 600 }}>{r.name}</td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{r.strategy}</td>
-                  <td style={{ textAlign: 'right' }}>{r.totalReturn}%</td>
-                  <td style={{ textAlign: 'right' }}>{r.maxDrawdown}%</td>
-                  <td style={{ textAlign: 'right' }}>{r.sortino}</td>
-                  <td style={{ textAlign: 'right' }}>{r.omega}</td>
-                  <td style={{ textAlign: 'right' }}>{r.kelly}%</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{r.overallRank}</td>
+          <div className="table-scroll">
+            <table className="score-table">
+              <thead>
+                <tr>
+                  <th>Asset</th>
+                  <th>Strategy</th>
+                  <th style={{ textAlign: 'right' }}>Total Return</th>
+                  <th style={{ textAlign: 'right' }}>Max Drawdown</th>
+                  <th style={{ textAlign: 'right' }}>Sortino</th>
+                  <th style={{ textAlign: 'right' }}>Omega</th>
+                  <th style={{ textAlign: 'right' }}>Kelly</th>
+                  <th style={{ textAlign: 'right' }}>Overall Rank</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {assetPerf.map(r => (
+                  <tr
+                    key={r.idx}
+                    onClick={() => navigate(`/asset/${r.idx}`)}
+                    style={{ cursor: 'pointer' }}
+                    className="clickable-row"
+                  >
+                    <td style={{ fontWeight: 600 }}>{r.name}</td>
+                    <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{r.strategy}</td>
+                    <td style={{ textAlign: 'right' }}>{r.totalReturn}%</td>
+                    <td style={{ textAlign: 'right' }}>{r.maxDrawdown}%</td>
+                    <td style={{ textAlign: 'right' }}>{r.sortino}</td>
+                    <td style={{ textAlign: 'right' }}>{r.omega}</td>
+                    <td style={{ textAlign: 'right' }}>{r.kelly}%</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{r.overallRank}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      <FundamentalsPanel />
-
-      {ratioData && ratioData.pairs.length > 0 && (
-        <RatiosTable ratioData={ratioData} />
-      )}
-
-      <AllocationSection assetData={assetData} ratioData={ratioData} paxgData={paxgData} />
     </div>
   );
 }

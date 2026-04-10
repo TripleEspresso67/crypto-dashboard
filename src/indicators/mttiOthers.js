@@ -335,10 +335,11 @@ export function impulsiveMomentumScore(candles, params) {
   const medN     = _median(C, im_lenMED);
   const absDevs  = C.map((c, i) => Number.isNaN(medN[i]) ? NaN : Math.abs(c - medN[i]));
   const madVal   = _median(absDevs, im_lenMED);
-  const median28 = _median(C, 28);
 
-  const medP = median28.map((m, i) => Number.isNaN(m) || Number.isNaN(madVal[i]) ? NaN : m + madVal[i] * im_madMult);
-  const medM = median28.map((m, i) => Number.isNaN(m) || Number.isNaN(madVal[i]) ? NaN : m - madVal[i] * im_madMult);
+  // Pine uses the same median length input for med_p/med_m base:
+  // med = ta.median(c, imp_lenMED)
+  const medP = medN.map((m, i) => Number.isNaN(m) || Number.isNaN(madVal[i]) ? NaN : m + madVal[i] * im_madMult);
+  const medM = medN.map((m, i) => Number.isNaN(m) || Number.isNaN(madVal[i]) ? NaN : m - madVal[i] * im_madMult);
   const longM  = _crossover(C, medP);
   const shortM = _crossunder(C, medM);
 

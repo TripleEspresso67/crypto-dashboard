@@ -16,30 +16,32 @@ export default function ScoreTable({ indicatorResults, candles }) {
   }
 
   return (
-    <table className="score-table">
-      <thead>
-        <tr>
-          <th>Indicator</th>
-          <th>Score</th>
-          <th>Last Change</th>
-        </tr>
-      </thead>
-      <tbody>
-        {indicatorResults.map(r => {
-          const current = r.scores[lastIdx];
-          return (
-            <tr key={r.key}>
-              <td>{r.name}</td>
-              <td>
-                <span className={`score-cell ${scoreClass(current)}`}>
-                  {current > 0 ? '+1' : current < 0 ? '-1' : '0'}
-                </span>
-              </td>
-              <td>{formatDate(r.lastChanged[lastIdx])}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <div className="table-scroll">
+      <table className="score-table">
+        <thead>
+          <tr>
+            <th>Indicator</th>
+            <th style={{ textAlign: 'center' }}>Score</th>
+            <th style={{ textAlign: 'right' }}>Last Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          {indicatorResults.map(r => {
+            const current = r.scores[lastIdx];
+            return (
+              <tr key={r.key}>
+                <td>{r.name}</td>
+                <td style={{ textAlign: 'center' }}>
+                  <span className={`score-cell ${scoreClass(current)}`}>
+                    {current > 0 ? '+1' : current < 0 ? '-1' : '0'}
+                  </span>
+                </td>
+                <td style={{ textAlign: 'right' }}>{formatDate(r.lastChanged[lastIdx])}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

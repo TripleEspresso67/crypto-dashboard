@@ -78,37 +78,39 @@ export default function RatiosTable({ ratioData }) {
 
       <div className="section">
         <h3 className="section-title">Asset Dominance Ranking</h3>
-        <table className="score-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Asset</th>
-              <th>Outperforming</th>
-              <th>Underperforming</th>
-              <th>Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dominanceList.map((d, idx) => (
-              <tr key={d.name}>
-                <td>{idx + 1}</td>
-                <td style={{ fontWeight: 600 }}>{d.name}</td>
-                <td>
-                  <span className="score-cell positive">{d.wins}</span>
-                </td>
-                <td>
-                  <span className="score-cell negative">{d.losses}</span>
-                </td>
-                <td style={{
-                  color: '#ffffff',
-                  fontWeight: 600
-                }}>
-                  {d.score > 0 ? '+' : ''}{d.score}
-                </td>
+        <div className="table-scroll">
+          <table className="score-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Asset</th>
+                <th>Outperforming</th>
+                <th>Underperforming</th>
+                <th>Score</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {dominanceList.map((d, idx) => (
+                <tr key={d.name}>
+                  <td>{idx + 1}</td>
+                  <td style={{ fontWeight: 600 }}>{d.name}</td>
+                  <td>
+                    <span className="score-cell positive">{d.wins}</span>
+                  </td>
+                  <td>
+                    <span className="score-cell negative">{d.losses}</span>
+                  </td>
+                  <td style={{
+                    color: '#ffffff',
+                    fontWeight: 600
+                  }}>
+                    {d.score > 0 ? '+' : ''}{d.score}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="section">
@@ -135,7 +137,7 @@ export default function RatiosTable({ ratioData }) {
                     ? `${p.numerator} outperforming ${p.denominator}`
                     : `${p.denominator} outperforming ${p.numerator}`;
                   return (
-                    <tr key={p.label} onClick={() => navigate(`/ratio/${idx}`)} style={{ cursor: 'pointer' }}>
+                    <tr key={p.label} onClick={() => navigate(`/ratio/${idx}`)} style={{ cursor: 'pointer' }} className="clickable-row">
                       <td style={{ fontWeight: 600 }}>{p.label}</td>
                       <td style={{ fontWeight: 600 }}>
                         {p.score > 0 ? '+' : ''}{p.score.toFixed(2)}

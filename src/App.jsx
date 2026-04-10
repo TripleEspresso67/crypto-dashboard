@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { fetchAllCandles, fetchLivePrices, getWarmupStart, ASSET_CONFIGS } from './api/binance';
 import { runStrategy } from './strategies/scorer';
 import { runBacktest } from './backtest/engine';
@@ -12,6 +12,9 @@ import Overview from './components/Overview';
 import AssetDetail from './components/AssetDetail';
 import RatioDetail from './components/RatioDetail';
 import FormulaDetail from './components/FormulaDetail';
+import RatiosTable from './components/RatiosTable';
+import AllocationSection from './components/AllocationSection';
+import FundamentalsPanel from './components/FundamentalsPanel';
 
 const STRATEGY_PARAMS = {
   'LTTI': LTTI_PARAMS,
@@ -140,6 +143,7 @@ function App() {
       });
 
       setAssetData(updatedResults);
+      baseDataRef.current = updatedResults;
       setLastLiveUpdate(new Date());
 
       const updatedDaily = {};
@@ -177,6 +181,20 @@ function App() {
         <div>
           <h1>Crypto Strategy Dashboard</h1>
           <span className="subtitle">LTTI &middot; MTTI-BTC &middot; MTTI-Others</span>
+          <div className="app-nav" role="navigation" aria-label="Primary dashboard sections">
+            <NavLink to="/" end className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+              Market
+            </NavLink>
+            <NavLink to="/ratios" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+              Ratios
+            </NavLink>
+            <NavLink to="/allocation" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+              Allocation
+            </NavLink>
+            <NavLink to="/fundamentals" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+              Fundamentals
+            </NavLink>
+          </div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <span className="subtitle">
@@ -198,11 +216,50 @@ function App() {
             element={
               <Overview
                 assetData={assetData}
-                ratioData={ratioData}
-                paxgData={paxgData}
                 loading={loading}
                 error={error}
               />
+            }
+          />
+          <Route
+            path="/ratios"
+            element={
+              error ? (
+                <div className="error-msg">{error}</div>
+              ) : loading ? (
+                <div className="loading">
+                  <div className="spinner" />
+                  <p>Computing all pair ratios...</p>
+                </div>
+              ) : ratioData?.pairs?.length > 0 ? (
+                <RatiosTable ratioData={ratioData} />
+              ) : (
+                <div className="error-msg">No ratio data available.</div>
+              )
+            }
+          />
+          <Route
+            path="/allocation"
+            element={
+              error ? (
+                <div className="error-msg">{error}</div>
+              ) : loading ? (
+                <div className="loading">
+                  <div className="spinner" />
+                  <p>Loading allocation strategies...</p>
+                </div>
+              ) : (
+                <AllocationSection assetData={assetData} ratioData={ratioData} paxgData={paxgData} />
+              )
+            }
+          />
+          <Route
+            path="/fundamentals"
+            element={
+              <div className="section">
+                <h3 className="section-title">Fundamentals</h3>
+                <FundamentalsPanel />
+              </div>
             }
           />
           <Route
@@ -224,6 +281,7 @@ function App() {
               />
             }
           />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>
     </div>

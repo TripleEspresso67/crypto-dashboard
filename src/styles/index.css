@@ -59,6 +59,28 @@ a {
   font-size: 0.875rem;
 }
 
+.app-nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.app-nav-link {
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.app-nav-link.active {
+  color: var(--text-primary);
+  border-color: var(--blue);
+}
+
 /* Overview Grid */
 .overview-grid {
   display: grid;
@@ -220,6 +242,33 @@ a {
   border-bottom: 1px solid var(--border);
 }
 
+.controls-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.control-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.control-input {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.helper-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
 /* Score Table */
 .score-table {
   width: 100%;
@@ -240,6 +289,29 @@ a {
 }
 
 .score-table tr:hover td {
+  background: var(--bg-hover);
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.table-scroll .score-table {
+  min-width: 760px;
+}
+
+.table-scroll .score-table.wide-table {
+  min-width: 980px;
+}
+
+.clickable-row td {
+  transition: background 0.12s ease;
+}
+
+.clickable-row:hover td {
   background: var(--bg-hover);
 }
 
@@ -388,4 +460,43 @@ a {
   border-radius: 8px;
   border: 1px solid var(--red);
   margin: 16px 0;
+}
+
+.allocation-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+
+@media (min-width: 1180px) {
+  .allocation-layout {
+    grid-template-columns: minmax(420px, 1fr) minmax(520px, 1.35fr);
+    align-items: start;
+  }
+}
+
+@media (max-width: 900px) {
+  .app {
+    padding: 14px;
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .score-table th,
+  .score-table td {
+    padding: 8px 10px;
+  }
+
+  .chart-container {
+    padding: 6px;
+  }
 }

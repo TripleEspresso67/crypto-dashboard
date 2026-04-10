@@ -1,6 +1,11 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { createChart, LineSeries } from 'lightweight-charts';
 
+const getChartHeight = () => {
+  const viewport = window.innerHeight || 800;
+  return Math.max(220, Math.min(340, Math.floor(viewport * 0.38)));
+};
+
 export default function EquityCurve({ equity, buyHoldEquity }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -25,7 +30,7 @@ export default function EquityCurve({ equity, buyHoldEquity }) {
         horzLines: { color: '#30363d' },
       },
       width: containerRef.current.clientWidth,
-      height: 300,
+      height: getChartHeight(),
       timeScale: { timeVisible: false },
       rightPriceScale: {
         borderColor: '#30363d',
@@ -49,12 +54,18 @@ export default function EquityCurve({ equity, buyHoldEquity }) {
 
     const handleResize = () => {
       if (containerRef.current) {
-        chart.applyOptions({ width: containerRef.current.clientWidth });
+        chart.applyOptions({
+          width: containerRef.current.clientWidth,
+          height: getChartHeight(),
+        });
       }
     };
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(containerRef.current);
     window.addEventListener('resize', handleResize);
 
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
       chart.remove();
       chartRef.current = null;

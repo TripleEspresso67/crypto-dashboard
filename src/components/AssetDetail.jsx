@@ -154,19 +154,13 @@ export default function AssetDetail({ assetData, loading }) {
           <h3 className="section-title" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>
             Backtest Performance
           </h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Backtest from:
-              </label>
+          <div className="controls-row" style={{ gap: 16, marginBottom: 0 }}>
+            <div className="controls-row" style={{ marginBottom: 0 }}>
+              <label className="control-label">Backtest from:</label>
               <select
                 value={selectedPreset}
                 onChange={handlePresetChange}
-                style={{
-                  padding: '5px 10px', fontSize: '0.8rem',
-                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                  border: '1px solid var(--border)', borderRadius: 4,
-                }}
+                className="control-input"
               >
                 {BACKTEST_DATE_PRESETS.map(p => (
                   <option key={p.value} value={p.value}>{p.label}</option>
@@ -177,38 +171,32 @@ export default function AssetDetail({ assetData, loading }) {
                   type="date"
                   value={customDate}
                   onChange={e => setCustomDate(e.target.value)}
-                  style={{
-                    padding: '5px 10px', fontSize: '0.8rem',
-                    background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                    border: '1px solid var(--border)', borderRadius: 4,
-                  }}
+                  className="control-input"
                 />
               )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Long:</label>
+            <div className="controls-row" style={{ marginBottom: 0 }}>
+              <label className="control-label">Long:</label>
               <input
                 type="number"
                 step="0.01"
                 value={longThreshStr !== null ? longThreshStr : stratParams.longThresh}
                 onChange={e => setLongThreshStr(e.target.value)}
                 style={{
-                  width: 65, padding: '5px 8px', fontSize: '0.8rem',
-                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                  border: '1px solid var(--border)', borderRadius: 4,
+                  width: 65,
                 }}
+                className="control-input"
               />
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Short:</label>
+              <label className="control-label">Short:</label>
               <input
                 type="number"
                 step="0.01"
                 value={shortThreshStr !== null ? shortThreshStr : stratParams.shortThresh}
                 onChange={e => setShortThreshStr(e.target.value)}
                 style={{
-                  width: 65, padding: '5px 8px', fontSize: '0.8rem',
-                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                  border: '1px solid var(--border)', borderRadius: 4,
+                  width: 65,
                 }}
+                className="control-input"
               />
             </div>
           </div>
