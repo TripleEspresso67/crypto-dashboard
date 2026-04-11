@@ -76,6 +76,7 @@ function formulaLabel(f) {
     case 'U': return 'Same as Strategy T, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation (remaining 70% in CASH).';
     case 'V': return 'Same as Strategy T, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
     case 'W': return 'Same as Strategy T 2, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
+    case 'X': return 'Same as Strategy T 2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allocate 50% to BTC (remaining 50% in CASH).';
     default: return f;
   }
 }
@@ -91,6 +92,7 @@ function formulaDisplay(f) {
     case 'U': return 'T 2';
     case 'V': return 'T 1';
     case 'W': return 'T 3';
+    case 'X': return 'T 4';
     default: return f;
   }
 }
@@ -661,6 +663,22 @@ function allocationForFormula(formula, ctx) {
         });
       }
       break;
+    case 'X':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.30,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        addWeight(btcIdx, 0.50);
+      }
+      break;
   }
 
   return { weights, paxgWeight };
@@ -988,7 +1006,7 @@ export function runAllocationAnalysis(
     ? ltti2dAsset.candles.map((c, i) => ({ time: c.time, signal: ltti2dAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W'];
+  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
   const formulaResults = formulas.map(f => {
     const result = runSingleFormula(
       f,

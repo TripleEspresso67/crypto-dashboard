@@ -25,6 +25,7 @@ export const FORMULA_COLORS = {
   U: '#22d3ee',
   V: '#f59e0b',
   W: '#10b981',
+  X: '#fb7185',
 };
 
 const getChartHeight = () => {
