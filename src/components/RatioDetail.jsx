@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import PriceChart from './PriceChart';
 import EquityCurve from './EquityCurve';
 import ScoreTable from './ScoreTable';
@@ -12,7 +12,14 @@ import { BACKTEST_DATE_PRESETS, DEFAULT_BACKTEST_START_DATE } from '../constants
 export default function RatioDetail({ ratioData, loading }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const idx = parseInt(id, 10);
+  const fallbackPath = '/ratios';
+  const fromPath = location.state?.from || fallbackPath;
+
+  function handleBack() {
+    navigate(fromPath);
+  }
 
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
   const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
@@ -60,8 +67,8 @@ export default function RatioDetail({ ratioData, loading }) {
   if (!pair) {
     return (
       <div className="detail-page">
-        <span className="back-link" onClick={() => navigate('/ratios')}>
-          &larr; Crypto Strategy Dashboard
+        <span className="back-link" onClick={handleBack}>
+          &larr; Back
         </span>
         <div className="error-msg">Ratio pair not found.</div>
       </div>
@@ -82,8 +89,8 @@ export default function RatioDetail({ ratioData, loading }) {
 
   return (
     <div className="detail-page">
-      <span className="back-link" onClick={() => navigate('/ratios')}>
-        &larr; Crypto Strategy Dashboard
+      <span className="back-link" onClick={handleBack}>
+        &larr; Back
       </span>
 
       <div className="detail-header">

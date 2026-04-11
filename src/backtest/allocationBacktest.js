@@ -31,25 +31,59 @@ function parseSortino(val) {
   return isNaN(num) ? -Infinity : num;
 }
 
+function normalizeMetric(values, higherIsBetter = true) {
+  const finite = values.filter(v => isFinite(v));
+  if (finite.length === 0) return new Array(values.length).fill(0);
+
+  const min = Math.min(...finite);
+  const max = Math.max(...finite);
+  const range = max - min;
+
+  return values.map(v => {
+    let value = v;
+    if (!isFinite(value)) {
+      if (value === Infinity) value = max;
+      else if (value === -Infinity) value = min;
+      else value = min;
+    }
+    const base = range === 0 ? 0.5 : (value - min) / range;
+    return higherIsBetter ? base : 1 - base;
+  });
+}
+
 function formulaLabel(f) {
   switch (f) {
     case 'A': return 'BTC Buy & Hold (100% BTC).';
-    case 'B': return 'When LTTI is LONG, allocate to BTC only when MTTI-BTC is LONG. CASH when LTTI is SHORT.';
-    case 'C': return 'When LTTI is LONG allocate 100% to Dominant Asset (fallback to most dominant LONG asset). CASH when LTTI is SHORT.';
-    case 'D': return 'When LTTI is LONG allocate 100% to best Overall Rank asset (fallback to next best LONG asset). CASH when LTTI is SHORT.';
+    case 'B': return 'When BTC LTTI 3D is LONG, allocate to BTC only when MTTI-BTC is LONG. CASH when BTC LTTI 3D is SHORT.';
+    case 'C': return 'When BTC LTTI 3D is LONG allocate 100% to Dominant Asset (fallback to most dominant LONG asset). CASH when BTC LTTI 3D is SHORT.';
+    case 'D': return 'When BTC LTTI 3D is LONG allocate 100% to best Overall Rank asset (fallback to next best LONG asset). CASH when BTC LTTI 3D is SHORT.';
     case 'E': return 'When MTTI-BTC is LONG allocate 100% to Dominant Asset (fallback to most dominant LONG asset). CASH when MTTI-BTC is SHORT.';
     case 'F': return 'When MTTI-BTC is LONG allocate 100% to best Overall Rank asset (fallback to next best LONG asset). CASH when MTTI-BTC is SHORT.';
-    case 'G': return 'When LTTI is LONG allocate 50% BTC and 50% to Dominant Asset (fallback to most dominant LONG asset). CASH when LTTI is SHORT.';
-    case 'H': return 'When LTTI is LONG allocate 50% BTC and 50% to best Overall Rank asset (fallback to next best LONG asset). CASH when LTTI is SHORT.';
-    case 'I': return 'Strategy I logic (step-by-step): 1) If LTTI is SHORT, allocate 100% to CASH. 2) If LTTI is LONG, evaluate assets by dominance order and only consider assets that are currently LONG. 3) Exclude BNB and DOGE entirely from this strategy. 4) For each eligible non-BTC asset, proposed allocation = Kelly Criterion (using the hardcoded Kelly backtest window that starts on 1 Jan 2023), except HYPE which is forced to 10%. 5) Build the non-BTC sleeve in dominance order with a hard cap of 60% total for all non-BTC assets combined; do not rescale to force 60%, and if adding the next less-dominant eligible asset would breach 60%, skip/cut off that asset. 6) After the non-BTC sleeve is set, allocate BTC only if BTC is LONG. 7) If BTC is LONG, BTC receives the remaining portfolio weight (100% minus the non-BTC sleeve). 8) If BTC is not LONG, the remaining weight stays in CASH. BTC is not capped by Kelly in this strategy.';
-    case 'J': return 'Same as Strategy I, but when LTTI is SHORT and MTTI-BTC is LONG, allocate 50% to BTC (remaining 50% in CASH).';
+    case 'G': return 'When BTC LTTI 3D is LONG allocate 50% BTC and 50% to Dominant Asset (fallback to most dominant LONG asset). CASH when BTC LTTI 3D is SHORT.';
+    case 'H': return 'When BTC LTTI 3D is LONG allocate 50% BTC and 50% to best Overall Rank asset (fallback to next best LONG asset). CASH when BTC LTTI 3D is SHORT.';
+    case 'I': return 'Strategy I logic (step-by-step): 1) If BTC LTTI 3D is SHORT, allocate 100% to CASH. 2) If BTC LTTI 3D is LONG, evaluate assets by dominance order and only consider assets that are currently LONG. 3) Exclude BNB and DOGE entirely from this strategy. 4) For each eligible non-BTC asset, proposed allocation = Kelly Criterion (using the hardcoded Kelly backtest window that starts on 1 Jan 2023), except HYPE which is forced to 10%. 5) Build the non-BTC sleeve in dominance order with a hard cap of 60% total for all non-BTC assets combined; do not rescale to force 60%, and if adding the next less-dominant eligible asset would breach 60%, skip/cut off that asset. 6) After the non-BTC sleeve is set, allocate BTC only if BTC is LONG. 7) If BTC is LONG, BTC receives the remaining portfolio weight (100% minus the non-BTC sleeve). 8) If BTC is not LONG, the remaining weight stays in CASH. BTC is not capped by Kelly in this strategy.';
+    case 'J': return 'Same as Strategy I, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allocate 50% to BTC (remaining 50% in CASH).';
     case 'K': return 'Same as Strategy I, but include BNB and DOGE.';
     case 'L': return 'Same as Strategy I, but with a non-BTC hard cap of 80%.';
     case 'M': return 'Same as Strategy I, but with no non-BTC hard cap.';
     case 'N': return 'Same as Strategy I, but do not use Kelly allocations. Use hardcoded caps in dominance order: BTC uncapped; total non-BTC cap 80%; SOL cap 60%; ETH cap 50%; SUI+HYPE joint cap 20%.';
-    case 'O': return 'When LTTI is LONG, allocate 100% to Dominant Asset. If SUI/HYPE is selected, cap SUI+HYPE joint allocation at 30% and allocate the remainder to the next most dominant LONG asset(s) as needed to reach 100%. All assets must be LONG to be considered. CASH when LTTI is SHORT.';
-    case 'P': return 'When LTTI is LONG, allocate 100% to Dominant Asset (exclude BNB and DOGE). If SUI/HYPE is selected, cap SUI+HYPE joint allocation at 30% and allocate the remainder to the next most dominant LONG asset(s) as needed to reach 100%. All assets must be LONG to be considered. CASH when LTTI is SHORT.';
+    case 'O': return 'When BTC LTTI 3D is LONG, allocate 100% to Dominant Asset (include BNB and DOGE). If SUI/HYPE is selected, cap SUI+HYPE joint allocation at 30% and allocate the remainder to the next most dominant LONG asset(s) as needed to reach 100%. All assets must be LONG to be considered. CASH when BTC LTTI 3D is SHORT.';
+    case 'P': return 'When BTC LTTI 3D is LONG, allocate 100% to Dominant Asset (exclude BNB and DOGE). If SUI/HYPE is selected, cap SUI+HYPE joint allocation at 30% and allocate the remainder to the next most dominant LONG asset(s) as needed to reach 100%. All assets must be LONG to be considered. CASH when BTC LTTI 3D is SHORT.';
     case 'Q': return 'Same as Strategy P, but use hard caps: BTC max 100%; combined non-BTC max 80%; ETH max 80%; SOL max 80%; SUI+HYPE combined max 20%.';
+    case 'R': return 'Same as Strategy P, but BTC LTTI 2D is used instead of BTC LTTI 3D.';
+    case 'S': return 'Same as Strategy P, but uses condition "when MTTI-BTC is LONG" instead of "when BTC LTTI 3D is LONG".';
+    default: return f;
+  }
+}
+
+function formulaDisplay(f) {
+  switch (f) {
+    case 'M': return 'I 2';
+    case 'K': return 'I 3';
+    case 'Q': return 'P 2';
+    case 'R': return 'P 3';
+    case 'S': return 'P 4';
+    case 'O': return 'P 1';
     default: return f;
   }
 }
@@ -136,6 +170,18 @@ function allocationsChanged(prevWeights, nextWeights, prevPaxgWeight, nextPaxgWe
     if (Math.abs(prev - next) > epsilon) return true;
   }
   return false;
+}
+
+function countExecutionChanges(prevWeights, nextWeights, prevPaxgWeight, nextPaxgWeight, epsilon = 1e-10) {
+  let executions = 0;
+  if (Math.abs((prevPaxgWeight || 0) - (nextPaxgWeight || 0)) > epsilon) executions += 1;
+  const n = Math.max(prevWeights?.length || 0, nextWeights?.length || 0);
+  for (let i = 0; i < n; i++) {
+    const prev = prevWeights?.[i] || 0;
+    const next = nextWeights?.[i] || 0;
+    if (Math.abs(prev - next) > epsilon) executions += 1;
+  }
+  return executions;
 }
 
 function computeDominanceOrdersByTimeline(timeline, mttiAssets, ratioPairs, fallbackOrder) {
@@ -230,7 +276,8 @@ function computeAssetOverallRanks(assetBacktests) {
 function allocationForFormula(formula, ctx) {
   const {
     n,
-    lttiLong,
+    ltti3dLong,
+    ltti2dLong,
     btcLong,
     btcIdx,
     hasPrice,
@@ -255,10 +302,10 @@ function allocationForFormula(formula, ctx) {
       addWeight(btcIdx, 1);
       break;
     case 'B':
-      if (lttiLong && btcLong) addWeight(btcIdx, 1);
+      if (ltti3dLong && btcLong) addWeight(btcIdx, 1);
       break;
     case 'C':
-      if (lttiLong) addWeight(dominantLongIdx, 1);
+      if (ltti3dLong) addWeight(dominantLongIdx, 1);
       break;
     case 'D':
       if (lttiLong) addWeight(rankedLongIdx, 1);
@@ -270,19 +317,19 @@ function allocationForFormula(formula, ctx) {
       if (btcLong) addWeight(rankedLongIdx, 1);
       break;
     case 'G':
-      if (lttiLong) {
+      if (ltti3dLong) {
         addWeight(btcIdx, 0.5);
         addWeight(dominantLongIdx, 0.5);
       }
       break;
     case 'H':
-      if (lttiLong) {
+      if (ltti3dLong) {
         addWeight(btcIdx, 0.5);
         addWeight(rankedLongIdx, 0.5);
       }
       break;
     case 'I':
-      if (lttiLong) {
+      if (ltti3dLong) {
         applyKellyDominanceAllocation({
           weights,
           addWeight,
@@ -318,7 +365,7 @@ function allocationForFormula(formula, ctx) {
       }
       break;
     case 'K':
-      if (lttiLong) {
+      if (ltti3dLong) {
         applyKellyDominanceAllocation({
           weights,
           addWeight,
@@ -352,7 +399,7 @@ function allocationForFormula(formula, ctx) {
       }
       break;
     case 'M':
-      if (lttiLong) {
+      if (ltti3dLong) {
         applyKellyDominanceAllocation({
           weights,
           addWeight,
@@ -406,7 +453,7 @@ function allocationForFormula(formula, ctx) {
       }
       break;
     case 'O':
-      if (lttiLong) {
+      if (ltti3dLong) {
         applyDominanceWithSuiHypeJointCap({
           addWeight,
           longMask,
@@ -419,7 +466,7 @@ function allocationForFormula(formula, ctx) {
       }
       break;
     case 'P':
-      if (lttiLong) {
+      if (ltti3dLong) {
         applyDominanceWithSuiHypeJointCap({
           addWeight,
           longMask,
@@ -432,7 +479,7 @@ function allocationForFormula(formula, ctx) {
       }
       break;
     case 'Q':
-      if (lttiLong) {
+      if (ltti3dLong) {
         let nonBtcAllocated = 0;
         let suiHypeAllocated = 0;
         for (const idx of dominanceOrder) {
@@ -472,12 +519,50 @@ function allocationForFormula(formula, ctx) {
         }
       }
       break;
+    case 'R':
+      if (ltti2dLong) {
+        applyDominanceWithSuiHypeJointCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          excludeBnbAndDoge: true,
+          suiHypeJointCap: 0.30,
+        });
+      }
+      break;
+    case 'S':
+      if (btcLong) {
+        applyDominanceWithSuiHypeJointCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          excludeBnbAndDoge: true,
+          suiHypeJointCap: 0.30,
+        });
+      }
+      break;
   }
 
   return { weights, paxgWeight };
 }
 
-function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrdersByIndex, overallOrder, lttiSignals, btcIdx, paxgMap, kellyFractions) {
+function runSingleFormula(
+  formula,
+  timeline,
+  closeMaps,
+  mttiAssets,
+  dominanceOrdersByIndex,
+  overallOrder,
+  ltti3dSignals,
+  ltti2dSignals,
+  btcIdx,
+  paxgMap,
+  kellyFractions
+) {
   const INITIAL_CAPITAL = 1000;
   const n = mttiAssets.length;
   let portfolioValue = INITIAL_CAPITAL;
@@ -491,19 +576,26 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
   let peakEquity = INITIAL_CAPITAL;
   let maxDrawdown = 0;
 
-  let lttiPtr = 0;
-  let currentLttiSignal = 'CASH';
+  let ltti3dPtr = 0;
+  let ltti2dPtr = 0;
+  let currentLtti3dSignal = 'CASH';
+  let currentLtti2dSignal = 'CASH';
   let prevWeights = new Array(n).fill(0);
   let prevPaxgWeight = 0;
   let allocationChangeTrades = 0;
+  let numberOfExecutions = 0;
   let hasPrevAllocation = false;
 
   for (let t = 0; t < timeline.length; t++) {
     const currTime = timeline[t];
 
-    while (lttiPtr < lttiSignals.length && lttiSignals[lttiPtr].time <= currTime) {
-      currentLttiSignal = lttiSignals[lttiPtr].signal;
-      lttiPtr++;
+    while (ltti3dPtr < ltti3dSignals.length && ltti3dSignals[ltti3dPtr].time <= currTime) {
+      currentLtti3dSignal = ltti3dSignals[ltti3dPtr].signal;
+      ltti3dPtr++;
+    }
+    while (ltti2dPtr < ltti2dSignals.length && ltti2dSignals[ltti2dPtr].time <= currTime) {
+      currentLtti2dSignal = ltti2dSignals[ltti2dPtr].signal;
+      ltti2dPtr++;
     }
 
     const hasPrice = closeMaps.map(m => m.has(currTime));
@@ -546,7 +638,8 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
 
     const { weights: currentWeights, paxgWeight } = allocationForFormula(formula, {
       n,
-      lttiLong: currentLttiSignal === 'LONG',
+      ltti3dLong: currentLtti3dSignal === 'LONG',
+      ltti2dLong: currentLtti2dSignal === 'LONG',
       btcLong,
       btcIdx,
       hasPrice,
@@ -589,9 +682,14 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
 
     if (!hasPrevAllocation) {
       if (invested) allocationChangeTrades += 1;
+      numberOfExecutions += countExecutionChanges(new Array(n).fill(0), currentWeights, 0, paxgWeight);
       hasPrevAllocation = true;
-    } else if (allocationsChanged(prevWeights, currentWeights, prevPaxgWeight, paxgWeight)) {
-      allocationChangeTrades += 1;
+    } else {
+      const executions = countExecutionChanges(prevWeights, currentWeights, prevPaxgWeight, paxgWeight);
+      numberOfExecutions += executions;
+      if (executions > 0 && allocationsChanged(prevWeights, currentWeights, prevPaxgWeight, paxgWeight)) {
+        allocationChangeTrades += 1;
+      }
     }
 
     prevWeights = currentWeights;
@@ -669,6 +767,7 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
     buyHoldReturn: '--',
     totalTrades: tradeDetails.length,
     numberOfTrades: allocationChangeTrades,
+    numberOfExecutions,
     wins,
     losses,
     winRate: winRate.toFixed(1),
@@ -694,7 +793,15 @@ function runSingleFormula(formula, timeline, closeMaps, mttiAssets, dominanceOrd
  * Run full allocation analysis: compare all formulas (A–Q),
  * return asset table + equity curve + per-bar allocations for each.
  */
-export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtestStart = DEFAULT_BACKTEST_START, lttiAsset = null, paxgAsset = null) {
+export function runAllocationAnalysis(
+  mttiAssets,
+  dominance,
+  ratioPairs,
+  backtestStart = DEFAULT_BACKTEST_START,
+  ltti3dAsset = null,
+  paxgAsset = null,
+  ltti2dAsset = null
+) {
   const n = mttiAssets.length;
   if (n === 0) return null;
 
@@ -758,11 +865,14 @@ export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtes
   );
 
   const btcMttiIdx = mttiAssets.findIndex(a => a.config.strategy === 'MTTI-BTC');
-  const lttiSignals = lttiAsset
-    ? lttiAsset.candles.map((c, i) => ({ time: c.time, signal: lttiAsset.signals[i] }))
+  const ltti3dSignals = ltti3dAsset
+    ? ltti3dAsset.candles.map((c, i) => ({ time: c.time, signal: ltti3dAsset.signals[i] }))
+    : null;
+  const ltti2dSignals = ltti2dAsset
+    ? ltti2dAsset.candles.map((c, i) => ({ time: c.time, signal: ltti2dAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
+  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S'];
   const formulaResults = formulas.map(f => {
     const result = runSingleFormula(
       f,
@@ -771,12 +881,13 @@ export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtes
       mttiAssets,
       dominanceOrdersByIndex,
       overallOrder,
-      lttiSignals ?? [],
+      ltti3dSignals ?? [],
+      ltti2dSignals ?? [],
       btcMttiIdx,
       paxgMap,
       kellyFractions
     );
-    return { formula: f, label: formulaLabel(f), ...result };
+    return { formula: f, displayFormula: formulaDisplay(f), label: formulaLabel(f), ...result };
   });
 
   const assetNames = mttiAssets.map(a => a.config.name);
@@ -807,9 +918,11 @@ export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtes
 
   const comparison = formulaResults.map(r => ({
     formula: r.formula,
+    displayFormula: r.displayFormula,
     label: r.label,
     totalReturn: r.totalReturn,
     totalTrades: r.stats.numberOfTrades ?? r.stats.totalTrades,
+    numberOfExecutions: r.stats.numberOfExecutions ?? 0,
     maxDrawdown: r.stats.maxDrawdown,
     sortino: r.sortino,
     omega: r.stats.omega,
@@ -819,6 +932,7 @@ export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtes
   const vals = {
     totalReturn: comparison.map(r => parseFloat(r.totalReturn) || -Infinity),
     totalTrades: comparison.map(r => parseFloat(r.totalTrades) || -Infinity),
+    numberOfExecutions: comparison.map(r => parseFloat(r.numberOfExecutions) || -Infinity),
     maxDrawdown: comparison.map(r => parseFloat(r.maxDrawdown) || Infinity),
     sortino:     comparison.map(r => parseSortino(r.sortino)),
     omega:       comparison.map(r => parseSortino(r.omega)),
@@ -826,13 +940,14 @@ export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtes
   };
 
   const retRanks = rankDescending(vals.totalReturn);
-  const trdRanks = rankDescending(vals.totalTrades);
+  const trdRanks = rankDescending(vals.totalTrades.map(v => -v));
+  const exeRanks = rankDescending(vals.numberOfExecutions.map(v => -v));
   const ddRanks  = rankDescending(vals.maxDrawdown.map(v => -v));
   const sorRanks = rankDescending(vals.sortino);
   const omgRanks = rankDescending(vals.omega);
   const kelRanks = rankDescending(vals.kelly);
 
-  const cumScores = comparison.map((_, i) => retRanks[i] + trdRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i] + kelRanks[i]);
+  const cumScores = comparison.map((_, i) => retRanks[i] + trdRanks[i] + exeRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i] + kelRanks[i]);
 
   const indices = comparison.map((_, i) => i);
   indices.sort((a, b) => cumScores[a] - cumScores[b]);
@@ -841,11 +956,33 @@ export function runAllocationAnalysis(mttiAssets, dominance, ratioPairs, backtes
   for (let rank = 0; rank < indices.length; rank++) {
     strategyOverallRanks[indices[rank]] = rank + 1;
   }
+  const normalizedTotalReturn = normalizeMetric(vals.totalReturn, true);
+  const normalizedTotalTrades = normalizeMetric(vals.totalTrades, false);
+  const normalizedExecutions = normalizeMetric(vals.numberOfExecutions, false);
+  const normalizedMaxDrawdown = normalizeMetric(vals.maxDrawdown, false);
+  const normalizedSortino = normalizeMetric(vals.sortino, true);
+  const normalizedOmega = normalizeMetric(vals.omega, true);
+  const normalizedKelly = normalizeMetric(vals.kelly, true);
+
+  const normalizedScores = comparison.map((_, i) =>
+    normalizedTotalReturn[i] +
+    normalizedTotalTrades[i] +
+    normalizedExecutions[i] +
+    normalizedMaxDrawdown[i] +
+    normalizedSortino[i] +
+    normalizedOmega[i] +
+    normalizedKelly[i]
+  );
+  const normalizedRanks = rankDescending(normalizedScores);
+
   for (let i = 0; i < comparison.length; i++) {
+    comparison[i].simpleRank = strategyOverallRanks[i];
     comparison[i].overallRank = strategyOverallRanks[i];
+    comparison[i].normalizedRank = normalizedRanks[i];
+    comparison[i].normalizedScore = normalizedScores[i];
   }
 
-  comparison.sort((a, b) => a.overallRank - b.overallRank);
+  comparison.sort((a, b) => a.simpleRank - b.simpleRank);
 
   return {
     comparison,

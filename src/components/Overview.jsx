@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { runBacktest } from '../backtest/engine';
 import { MTTI_BTC_PARAMS } from '../strategies/mttiBtcConfig';
 import { MTTI_OTHERS_PARAMS } from '../strategies/mttiOthersConfig';
@@ -27,6 +27,7 @@ const STRATEGY_PARAMS = {
 
 export default function Overview({ assetData, loading, error }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
   const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
 
@@ -40,6 +41,7 @@ export default function Overview({ assetData, loading, error }) {
   const assetPerf = useMemo(() => {
     if (!assetData || assetData.length === 0) return [];
     const rows = assetData.map((a, idx) => {
+      const sourceIndex = Number.isInteger(a.sourceIndex) ? a.sourceIndex : idx;
       const stratParams = STRATEGY_PARAMS[a.config.strategy];
       const stats = runBacktest(
         a.candles,
@@ -50,7 +52,7 @@ export default function Overview({ assetData, loading, error }) {
       ).stats;
 
       return {
-        idx,
+        idx: sourceIndex,
         name: a.config.name,
         strategy: `${a.config.strategy} ${a.config.interval.toUpperCase()}`,
         totalReturn: stats?.totalReturn ?? '--',
@@ -127,6 +129,7 @@ export default function Overview({ assetData, loading, error }) {
         <h3 className="section-title">Asset Strategies</h3>
         <div className="overview-grid">
           {assetData.map((asset, idx) => {
+            const sourceIndex = Number.isInteger(asset.sourceIndex) ? asset.sourceIndex : idx;
             const lastCandle = asset.candles[asset.candles.length - 1];
             const lastScore = asset.compositeScores[asset.compositeScores.length - 1];
             const lastSignal = asset.signals[asset.signals.length - 1];
@@ -141,9 +144,9 @@ export default function Overview({ assetData, loading, error }) {
 
             return (
               <div
-                key={idx}
+                key={sourceIndex}
                 className="asset-card"
-                onClick={() => navigate(`/asset/${idx}`)}
+                onClick={() => navigate(`/asset/${sourceIndex}`, { state: { from: location.pathname } })}
               >
                 <div className="card-header">
                   <span className="asset-name">{asset.config.name}</span>
@@ -215,7 +218,7 @@ export default function Overview({ assetData, loading, error }) {
                 {assetPerf.map(r => (
                   <tr
                     key={r.idx}
-                    onClick={() => navigate(`/asset/${r.idx}`)}
+                    onClick={() => navigate(`/asset/${r.idx}`, { state: { from: location.pathname } })}
                     style={{ cursor: 'pointer' }}
                     className="clickable-row"
                   >

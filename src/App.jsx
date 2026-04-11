@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { fetchAllCandles, fetchLivePrices, getWarmupStart, ASSET_CONFIGS } from './api/binance';
 import { runStrategy } from './strategies/scorer';
@@ -14,7 +14,8 @@ import RatioDetail from './components/RatioDetail';
 import FormulaDetail from './components/FormulaDetail';
 import RatiosTable from './components/RatiosTable';
 import AllocationSection from './components/AllocationSection';
-import FundamentalsPanel from './components/FundamentalsPanel';
+import MarketPage from './components/MarketPage';
+import ImprovementsPage from './components/ImprovementsPage';
 
 const STRATEGY_PARAMS = {
   'LTTI': LTTI_PARAMS,
@@ -175,24 +176,47 @@ function App() {
     return () => clearInterval(livePoll);
   }, [loading, updateLivePrices]);
 
+  const indexedAssetData = useMemo(
+    () => assetData.map((asset, idx) => ({ ...asset, sourceIndex: idx })),
+    [assetData]
+  );
+
+  const ltti2dAsset = useMemo(
+    () => indexedAssetData.find(a => a.config.strategy === 'LTTI' && a.config.interval === '2d') || null,
+    [indexedAssetData]
+  );
+
+  const ltti3dAsset = useMemo(
+    () => indexedAssetData.find(a => a.config.strategy === 'LTTI' && a.config.interval === '3d') || null,
+    [indexedAssetData]
+  );
+
+  const assetsTabData = useMemo(
+    () => indexedAssetData.filter(a => !(a.config.strategy === 'LTTI' && (a.config.interval === '2d' || a.config.interval === '3d'))),
+    [indexedAssetData]
+  );
+
   return (
     <div className="app">
       <div className="app-header">
         <div>
-          <h1>Crypto Strategy Dashboard</h1>
+          <h1>Crypto Dashboard</h1>
           <span className="subtitle">LTTI &middot; MTTI-BTC &middot; MTTI-Others</span>
           <div className="app-nav" role="navigation" aria-label="Primary dashboard sections">
             <NavLink to="/" end className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
-              Market
+              Assets
             </NavLink>
             <NavLink to="/ratios" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
               Ratios
             </NavLink>
+            <NavLink to="/market" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+              Market
+            </NavLink>
             <NavLink to="/allocation" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
               Allocation
             </NavLink>
-            <NavLink to="/fundamentals" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
-              Fundamentals
+            <NavLink to="/improvements" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+              Improvements
             </NavLink>
           </div>
         </div>
@@ -215,7 +239,7 @@ function App() {
             path="/"
             element={
               <Overview
-                assetData={assetData}
+                assetData={assetsTabData}
                 loading={loading}
                 error={error}
               />
@@ -254,12 +278,20 @@ function App() {
             }
           />
           <Route
-            path="/fundamentals"
+            path="/market"
             element={
-              <div className="section">
-                <h3 className="section-title">Fundamentals</h3>
-                <FundamentalsPanel />
-              </div>
+              <MarketPage
+                ltti2dAsset={ltti2dAsset}
+                ltti3dAsset={ltti3dAsset}
+                loading={loading}
+                error={error}
+              />
+            }
+          />
+          <Route
+            path="/improvements"
+            element={
+              <ImprovementsPage />
             }
           />
           <Route

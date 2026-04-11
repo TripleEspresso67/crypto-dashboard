@@ -1,7 +1,8 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function RatiosTable({ ratioData }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (!ratioData || !ratioData.pairs || ratioData.pairs.length === 0) return null;
 
@@ -137,7 +138,12 @@ export default function RatiosTable({ ratioData }) {
                     ? `${p.numerator} outperforming ${p.denominator}`
                     : `${p.denominator} outperforming ${p.numerator}`;
                   return (
-                    <tr key={p.label} onClick={() => navigate(`/ratio/${idx}`)} style={{ cursor: 'pointer' }} className="clickable-row">
+                    <tr
+                      key={p.label}
+                      onClick={() => navigate(`/ratio/${idx}`, { state: { from: location.pathname } })}
+                      style={{ cursor: 'pointer' }}
+                      className="clickable-row"
+                    >
                       <td style={{ fontWeight: 600 }}>{p.label}</td>
                       <td style={{ fontWeight: 600 }}>
                         {p.score > 0 ? '+' : ''}{p.score.toFixed(2)}

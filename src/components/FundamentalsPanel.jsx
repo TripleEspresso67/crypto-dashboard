@@ -78,6 +78,7 @@ export default function FundamentalsPanel() {
     const updated = { ...inputs, [id]: value, [`${id}_ts`]: Date.now(), lastUpdated: Date.now() };
     setInputs(updated);
     savePersist(updated);
+    window.dispatchEvent(new Event('fundamentals-updated'));
   }
 
   function timeAgo(ts) {

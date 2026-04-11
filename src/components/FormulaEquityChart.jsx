@@ -19,6 +19,8 @@ export const FORMULA_COLORS = {
   O: '#ff9e64',
   P: '#4dd0e1',
   Q: '#c4b5fd',
+  R: '#9ae6b4',
+  S: '#f0abfc',
 };
 
 const getChartHeight = () => {
@@ -26,7 +28,7 @@ const getChartHeight = () => {
   return Math.max(240, Math.min(380, Math.floor(viewport * 0.42)));
 };
 
-export default function FormulaEquityChart({ formulaEquities }) {
+export default function FormulaEquityChart({ formulaEquities, formulaDisplayMap = {} }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesMapRef = useRef({});
@@ -95,7 +97,7 @@ export default function FormulaEquityChart({ formulaEquities }) {
       const series = chart.addSeries(LineSeries, {
         color: FORMULA_COLORS[key] || '#8b949e',
         lineWidth: 2,
-        title: key,
+        title: formulaDisplayMap[key] || key,
       });
       series.setData(eq.map(e => ({ time: e.time / 1000, value: e.value })));
       seriesMapRef.current[key] = series;
@@ -129,7 +131,7 @@ export default function FormulaEquityChart({ formulaEquities }) {
               display: 'inline-block', width: 14, height: 3,
               background: FORMULA_COLORS[key] || '#8b949e', borderRadius: 1,
             }} />
-            <span style={{ color: '#8b949e' }}>{key}</span>
+            <span style={{ color: '#8b949e' }}>{formulaDisplayMap[key] || key}</span>
           </span>
         ))}
       </div>

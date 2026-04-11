@@ -1,7 +1,7 @@
 @echo off
-title Crypto Strategy Dashboard
+title Crypto Dashboard
 echo ==========================================
-echo   Starting Crypto Strategy Dashboard...
+echo   Starting Crypto Dashboard...
 echo ==========================================
 echo.
 

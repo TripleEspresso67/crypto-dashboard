@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { runAllocationAnalysis } from '../backtest/allocationBacktest';
 import { DEFAULT_BACKTEST_START_DATE, BACKTEST_DATE_PRESETS } from '../constants/backtestDates';
 import AllocationEquityCurve from './AllocationEquityCurve';
@@ -8,6 +8,13 @@ import StatsPanel from './StatsPanel';
 export default function FormulaDetail({ assetData, ratioData, paxgData, loading }) {
   const { key } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fallbackPath = '/allocation';
+  const fromPath = location.state?.from || fallbackPath;
+
+  function handleBack() {
+    navigate(fromPath);
+  }
 
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
   const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
@@ -19,8 +26,9 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
     if (!assetData || assetData.length === 0 || !ratioData?.dominance) return null;
     const mttiAssets = assetData.filter(a => a.config.strategy !== 'LTTI');
     if (mttiAssets.length === 0) return null;
-    const lttiAsset = assetData.find(a => a.config.strategy === 'LTTI') ?? null;
-    return runAllocationAnalysis(mttiAssets, ratioData.dominance, ratioData.pairs, backtestStart, lttiAsset, paxgData);
+    const ltti3dAsset = assetData.find(a => a.config.strategy === 'LTTI' && a.config.interval === '3d') ?? null;
+    const ltti2dAsset = assetData.find(a => a.config.strategy === 'LTTI' && a.config.interval === '2d') ?? null;
+    return runAllocationAnalysis(mttiAssets, ratioData.dominance, ratioData.pairs, backtestStart, ltti3dAsset, paxgData, ltti2dAsset);
   }, [assetData, ratioData, paxgData, backtestStart]);
 
   const details = data?.formulaDetails?.[key];
@@ -73,8 +81,8 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
   if (!details || !formulaInfo) {
     return (
       <div className="detail-page">
-        <span className="back-link" onClick={() => navigate('/allocation')}>
-          &larr; Crypto Strategy Dashboard
+        <span className="back-link" onClick={handleBack}>
+          &larr; Back
         </span>
         <div className="error-msg">Formula &ldquo;{key}&rdquo; not found.</div>
       </div>
@@ -89,14 +97,14 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
 
   return (
     <div className="detail-page">
-      <span className="back-link" onClick={() => navigate('/allocation')}>
-        &larr; Crypto Strategy Dashboard
+      <span className="back-link" onClick={handleBack}>
+        &larr; Back
       </span>
 
       <div className="detail-header">
         <div>
-          <h2>Formula {key}</h2>
-          <span style={{ fontSize: ['I', 'O', 'P', 'Q'].includes(key) ? '0.8rem' : '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+          <h2>Formula {formulaInfo.displayFormula || key}</h2>
+          <span style={{ fontSize: ['I', 'O', 'P', 'Q', 'R'].includes(key) ? '0.8rem' : '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
             {formulaInfo.label}
           </span>
         </div>
@@ -123,7 +131,7 @@ export default function FormulaDetail({ assetData, ratioData, paxgData, loading 
             />
           )}
         </div>
-        {(key === 'L' || key === 'M') && maxNonBtcAllocation !== null && (
+        {key === 'M' && maxNonBtcAllocation !== null && (
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: -4 }}>
             Max non-BTC allocation in selected window: {maxNonBtcAllocation.toFixed(2)}%
           </div>

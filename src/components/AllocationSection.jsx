@@ -1,14 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { runAllocationAnalysis } from '../backtest/allocationBacktest';
 import { DEFAULT_BACKTEST_START_DATE, BACKTEST_DATE_PRESETS } from '../constants/backtestDates';
 import FormulaEquityChart, { FORMULA_COLORS } from './FormulaEquityChart';
 
 export default function AllocationSection({ assetData, ratioData, paxgData }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
   const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
-  const [sortKey, setSortKey] = useState('overallRank');
+  const [sortKey, setSortKey] = useState('simpleRank');
   const [visibleFormulas, setVisibleFormulas] = useState(['A']);
   const [favoriteFormula, setFavoriteFormula] = useState(() => {
     try {
@@ -26,8 +27,9 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     if (!assetData || assetData.length === 0 || !ratioData?.dominance) return null;
     const mttiAssets = assetData.filter(a => a.config.strategy !== 'LTTI');
     if (mttiAssets.length === 0) return null;
-    const lttiAsset = assetData.find(a => a.config.strategy === 'LTTI') ?? null;
-    return runAllocationAnalysis(mttiAssets, ratioData.dominance, ratioData.pairs, backtestStart, lttiAsset, paxgData);
+    const ltti3dAsset = assetData.find(a => a.config.strategy === 'LTTI' && a.config.interval === '3d') ?? null;
+    const ltti2dAsset = assetData.find(a => a.config.strategy === 'LTTI' && a.config.interval === '2d') ?? null;
+    return runAllocationAnalysis(mttiAssets, ratioData.dominance, ratioData.pairs, backtestStart, ltti3dAsset, paxgData, ltti2dAsset);
   }, [assetData, ratioData, paxgData, backtestStart]);
 
   const formulaEquities = useMemo(() => {
@@ -47,7 +49,13 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
       const bv = parseFloat(b[sortKey]);
       const aVal = isNaN(av) ? -Infinity : av;
       const bVal = isNaN(bv) ? -Infinity : bv;
-      if (sortKey === 'overallRank') return aVal - bVal;
+      if (
+        sortKey === 'simpleRank' ||
+        sortKey === 'normalizedRank' ||
+        sortKey === 'totalTrades' ||
+        sortKey === 'numberOfExecutions' ||
+        sortKey === 'maxDrawdown'
+      ) return aVal - bVal;
       return bVal - aVal;
     });
     return rows;
@@ -129,6 +137,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
           </p>
           <FormulaEquityChart
             formulaEquities={visibleFormulaEquities}
+            formulaDisplayMap={Object.fromEntries((data?.comparison || []).map(r => [r.formula, r.displayFormula || r.formula]))}
           />
         </div>
 
@@ -139,6 +148,9 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
           </div>
           <div className="helper-text" style={{ marginBottom: 12 }}>
             Dominance-based strategies use time-based dominance, calculated bar-by-bar from the All Pair Ratios data.
+          </div>
+          <div className="helper-text" style={{ marginBottom: 12 }}>
+            Normalised Rank uses per-column min-max normalization across strategies for Total Return, Number of Trades, Number of Executions, Max Drawdown, Sortino, Omega, and Kelly. For Number of Trades, Number of Executions, and Max Drawdown, lower values are better. The seven normalized scores are summed, then ranked (highest sum = rank 1).
           </div>
           <div className="table-scroll">
             <table className="score-table wide-table">
@@ -159,7 +171,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                   </th>
                   <th
                     style={{ textAlign: 'center', cursor: 'pointer' }}
-                    title="Sort highest to lowest"
+                    title="Sort lowest to highest"
                     onClick={() => setSortKey('totalTrades')}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
@@ -169,7 +181,17 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                   </th>
                   <th
                     style={{ textAlign: 'center', cursor: 'pointer' }}
-                    title="Sort highest to lowest"
+                    title="Sort lowest to highest"
+                    onClick={() => setSortKey('numberOfExecutions')}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                      <span>Number of Executions</span>
+                      <span>&#9662;</span>
+                    </div>
+                  </th>
+                  <th
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    title="Sort lowest to highest"
                     onClick={() => setSortKey('maxDrawdown')}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
@@ -210,10 +232,20 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                   <th
                     style={{ textAlign: 'center', cursor: 'pointer' }}
                     title="Sort highest to lowest"
-                    onClick={() => setSortKey('overallRank')}
+                    onClick={() => setSortKey('simpleRank')}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
-                      <span>Overall Rank</span>
+                      <span>Simple Rank</span>
+                      <span>&#9662;</span>
+                    </div>
+                  </th>
+                  <th
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    title="Sort lowest to highest"
+                    onClick={() => setSortKey('normalizedRank')}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                      <span>Normalised Rank</span>
                       <span>&#9662;</span>
                     </div>
                   </th>
@@ -223,7 +255,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                 {sortedComparison.map(r => (
                     <tr
                       key={r.formula}
-                      onClick={() => navigate(`/formula/${r.formula}`)}
+                      onClick={() => navigate(`/formula/${r.formula}`, { state: { from: location.pathname } })}
                       style={{ cursor: 'pointer' }}
                       className="clickable-row"
                     >
@@ -288,10 +320,10 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                         </button>
                       </td>
                       <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                        <span style={{ color: FORMULA_COLORS[r.formula] || 'inherit' }}>{r.formula}</span>
+                        <span style={{ color: FORMULA_COLORS[r.formula] || 'inherit' }}>{r.displayFormula || r.formula}</span>
                         <span
                           title={r.label}
-                          aria-label={`Strategy ${r.formula} description`}
+                          aria-label={`Strategy ${r.displayFormula || r.formula} description`}
                           style={{
                             marginLeft: 8,
                             display: 'inline-flex',
@@ -312,11 +344,13 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                       </td>
                       <td style={{ textAlign: 'center' }}>{r.totalReturn}%</td>
                       <td style={{ textAlign: 'center' }}>{r.totalTrades}</td>
+                      <td style={{ textAlign: 'center' }}>{r.numberOfExecutions}</td>
                       <td style={{ textAlign: 'center' }}>{r.maxDrawdown}%</td>
                       <td style={{ textAlign: 'center' }}>{r.sortino}</td>
                       <td style={{ textAlign: 'center' }}>{r.omega}</td>
                       <td style={{ textAlign: 'center' }}>{r.kelly}%</td>
-                      <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.overallRank}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.simpleRank}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.normalizedRank}</td>
                     </tr>
                 ))}
               </tbody>
