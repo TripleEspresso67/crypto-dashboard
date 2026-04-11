@@ -52,6 +52,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
       if (
         sortKey === 'simpleRank' ||
         sortKey === 'normalizedRank' ||
+        sortKey === 'performanceRank' ||
         sortKey === 'totalTrades' ||
         sortKey === 'numberOfExecutions' ||
         sortKey === 'maxDrawdown'
@@ -152,6 +153,9 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
           <div className="helper-text" style={{ marginBottom: 12 }}>
             Normalised Rank uses per-column min-max normalization across strategies for Total Return, Number of Trades, Number of Executions, Max Drawdown, Sortino, Omega, and Kelly. For Number of Trades, Number of Executions, and Max Drawdown, lower values are better. The seven normalized scores are summed, then ranked (highest sum = rank 1).
           </div>
+          <div className="helper-text" style={{ marginBottom: 12 }}>
+            Performance Rank uses the same normalization method but only for Total Return and Max Drawdown. Lower Max Drawdown is better.
+          </div>
           <div className="table-scroll">
             <table className="score-table wide-table">
               <thead>
@@ -246,6 +250,16 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
                       <span>Normalised Rank</span>
+                      <span>&#9662;</span>
+                    </div>
+                  </th>
+                  <th
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    title="Sort lowest to highest"
+                    onClick={() => setSortKey('performanceRank')}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                      <span>Performance Rank</span>
                       <span>&#9662;</span>
                     </div>
                   </th>
@@ -351,6 +365,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                       <td style={{ textAlign: 'center' }}>{r.kelly}%</td>
                       <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.simpleRank}</td>
                       <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.normalizedRank}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.performanceRank}</td>
                     </tr>
                 ))}
               </tbody>

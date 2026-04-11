@@ -21,6 +21,10 @@ export const FORMULA_COLORS = {
   Q: '#c4b5fd',
   R: '#9ae6b4',
   S: '#f0abfc',
+  T: '#94a3b8',
+  U: '#22d3ee',
+  V: '#f59e0b',
+  W: '#10b981',
 };
 
 const getChartHeight = () => {

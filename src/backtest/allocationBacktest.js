@@ -72,6 +72,10 @@ function formulaLabel(f) {
     case 'Q': return 'Same as Strategy P, but use hard caps: BTC max 100%; combined non-BTC max 80%; ETH max 80%; SOL max 80%; SUI+HYPE combined max 20%.';
     case 'R': return 'Same as Strategy P, but BTC LTTI 2D is used instead of BTC LTTI 3D.';
     case 'S': return 'Same as Strategy P, but uses condition "when MTTI-BTC is LONG" instead of "when BTC LTTI 3D is LONG".';
+    case 'T': return 'When BTC LTTI 3D is LONG, allocate to dominant assets in order of dominance. BNB, DOGE, SUI, and HYPE have a 30% joint allocation cap. BTC, ETH, and SOL are uncapped. CASH when BTC LTTI 3D is SHORT.';
+    case 'U': return 'Same as Strategy T, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation (remaining 70% in CASH).';
+    case 'V': return 'Same as Strategy T, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
+    case 'W': return 'Same as Strategy T 2, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
     default: return f;
   }
 }
@@ -84,6 +88,9 @@ function formulaDisplay(f) {
     case 'R': return 'P 3';
     case 'S': return 'P 4';
     case 'O': return 'P 1';
+    case 'U': return 'T 2';
+    case 'V': return 'T 1';
+    case 'W': return 'T 3';
     default: return f;
   }
 }
@@ -151,6 +158,38 @@ function applyDominanceWithSuiHypeJointCap({
     addWeight(idx, alloc);
     remaining -= alloc;
     if (name === 'SUI' || name === 'HYPE') suiHypeAllocated += alloc;
+  }
+}
+
+function applyDominanceWithJointGroupCap({
+  addWeight,
+  longMask,
+  hasPrice,
+  dominanceOrder,
+  assetNames,
+  cappedAssetSet,
+  jointCap = 0.30,
+  totalAllocationTarget = 1.0,
+}) {
+  let remaining = Math.max(0, Math.min(1, totalAllocationTarget));
+  let cappedAllocated = 0;
+
+  for (const idx of dominanceOrder) {
+    if (remaining <= 0) break;
+    if (!longMask[idx] || !hasPrice[idx]) continue;
+
+    const name = assetNames[idx];
+    let alloc = remaining;
+    if (cappedAssetSet.has(name)) {
+      const remainingJoint = jointCap - cappedAllocated;
+      if (remainingJoint <= 0) continue;
+      alloc = Math.min(alloc, remainingJoint);
+    }
+
+    if (!isFinite(alloc) || alloc <= 0) continue;
+    addWeight(idx, alloc);
+    remaining -= alloc;
+    if (cappedAssetSet.has(name)) cappedAllocated += alloc;
   }
 }
 
@@ -545,6 +584,83 @@ function allocationForFormula(formula, ctx) {
         });
       }
       break;
+    case 'T':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.30,
+        });
+      }
+      break;
+    case 'U':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.30,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.30,
+          totalAllocationTarget: 0.30,
+        });
+      }
+      break;
+    case 'V':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.20,
+          totalAllocationTarget: 1.0,
+        });
+      }
+      break;
+    case 'W':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.20,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.20,
+          totalAllocationTarget: 0.20,
+        });
+      }
+      break;
   }
 
   return { weights, paxgWeight };
@@ -872,7 +988,7 @@ export function runAllocationAnalysis(
     ? ltti2dAsset.candles.map((c, i) => ({ time: c.time, signal: ltti2dAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S'];
+  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W'];
   const formulaResults = formulas.map(f => {
     const result = runSingleFormula(
       f,
@@ -975,11 +1091,19 @@ export function runAllocationAnalysis(
   );
   const normalizedRanks = rankDescending(normalizedScores);
 
+  const performanceScores = comparison.map((_, i) =>
+    normalizedTotalReturn[i] +
+    normalizedMaxDrawdown[i]
+  );
+  const performanceRanks = rankDescending(performanceScores);
+
   for (let i = 0; i < comparison.length; i++) {
     comparison[i].simpleRank = strategyOverallRanks[i];
     comparison[i].overallRank = strategyOverallRanks[i];
     comparison[i].normalizedRank = normalizedRanks[i];
     comparison[i].normalizedScore = normalizedScores[i];
+    comparison[i].performanceRank = performanceRanks[i];
+    comparison[i].performanceScore = performanceScores[i];
   }
 
   comparison.sort((a, b) => a.simpleRank - b.simpleRank);
