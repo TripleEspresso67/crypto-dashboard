@@ -111,6 +111,31 @@ export default function MarketPage({ ltti2dAsset, ltti3dAsset, loading, error })
     return values.reduce((sum, v) => sum + v, 0) / values.length;
   }, [fundamentalsInputs, fundamentalsReady]);
 
+  const fundamentalIndicatorValues = useMemo(() => {
+    if (!fundamentalsReady) return null;
+    const values = REQUIRED_FUNDAMENTAL_IDS
+      .map(id => parseInt(fundamentalsInputs[id], 10))
+      .filter(Number.isFinite);
+    if (values.length !== REQUIRED_FUNDAMENTAL_IDS.length) return null;
+    return values;
+  }, [fundamentalsInputs, fundamentalsReady]);
+
+  const technicalIndicatorValues2d = useMemo(() => {
+    if (!ltti2dAsset?.indicatorResults || !ltti2dAsset?.candles?.length) return [];
+    const scores = ltti2dAsset.indicatorResults
+      .map(r => getIndicatorCurrent(r, ltti2dAsset.candles))
+      .filter(v => v !== null);
+    return scores;
+  }, [ltti2dAsset]);
+
+  const technicalIndicatorValues3d = useMemo(() => {
+    if (!ltti3dAsset?.indicatorResults || !ltti3dAsset?.candles?.length) return [];
+    const scores = ltti3dAsset.indicatorResults
+      .map(r => getIndicatorCurrent(r, ltti3dAsset.candles))
+      .filter(v => v !== null);
+    return scores;
+  }, [ltti3dAsset]);
+
   const technicalOverall = useMemo(() => {
     const vals = [technical2d, technical3d].filter(v => v !== null);
     if (vals.length === 0) return null;
@@ -118,19 +143,24 @@ export default function MarketPage({ ltti2dAsset, ltti3dAsset, loading, error })
   }, [technical2d, technical3d]);
 
   const fundamentalPlusTechnical2d = useMemo(() => {
-    if (fundamentalAggregate === null || technical2d === null) return null;
-    return (fundamentalAggregate + technical2d) / 2;
-  }, [fundamentalAggregate, technical2d]);
+    if (!fundamentalIndicatorValues || technicalIndicatorValues2d.length === 0) return null;
+    const all = [...fundamentalIndicatorValues, ...technicalIndicatorValues2d];
+    return all.reduce((sum, v) => sum + v, 0) / all.length;
+  }, [fundamentalIndicatorValues, technicalIndicatorValues2d]);
 
   const fundamentalPlusTechnical3d = useMemo(() => {
-    if (fundamentalAggregate === null || technical3d === null) return null;
-    return (fundamentalAggregate + technical3d) / 2;
-  }, [fundamentalAggregate, technical3d]);
+    if (!fundamentalIndicatorValues || technicalIndicatorValues3d.length === 0) return null;
+    const all = [...fundamentalIndicatorValues, ...technicalIndicatorValues3d];
+    return all.reduce((sum, v) => sum + v, 0) / all.length;
+  }, [fundamentalIndicatorValues, technicalIndicatorValues3d]);
 
   const fundamentalPlusTechnicalOverall = useMemo(() => {
-    if (fundamentalAggregate === null || technicalOverall === null) return null;
-    return (fundamentalAggregate + technicalOverall) / 2;
-  }, [fundamentalAggregate, technicalOverall]);
+    if (!fundamentalIndicatorValues) return null;
+    const technicalAll = [...technicalIndicatorValues2d, ...technicalIndicatorValues3d];
+    if (technicalAll.length === 0) return null;
+    const all = [...fundamentalIndicatorValues, ...technicalAll];
+    return all.reduce((sum, v) => sum + v, 0) / all.length;
+  }, [fundamentalIndicatorValues, technicalIndicatorValues2d, technicalIndicatorValues3d]);
 
   const indicatorRows = useMemo(() => {
     const order = ltti3dAsset?.indicatorResults?.map(r => r.key) || ltti2dAsset?.indicatorResults?.map(r => r.key) || [];
