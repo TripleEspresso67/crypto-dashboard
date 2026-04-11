@@ -9,7 +9,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
   const location = useLocation();
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_BACKTEST_START_DATE);
   const [customDate, setCustomDate] = useState(DEFAULT_BACKTEST_START_DATE);
-  const [sortKey, setSortKey] = useState('simpleRank');
+  const [sortKey, setSortKey] = useState('totalReturn');
   const [visibleFormulas, setVisibleFormulas] = useState(['A']);
   const [favoriteFormula, setFavoriteFormula] = useState(() => {
     try {
