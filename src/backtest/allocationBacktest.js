@@ -77,6 +77,7 @@ function formulaLabel(f) {
     case 'V': return 'Same as Strategy T, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
     case 'W': return 'Same as Strategy T 2, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
     case 'X': return 'Same as Strategy T 2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allocate 50% to BTC (remaining 50% in CASH).';
+    case 'Y': return 'Same as Strategy T 2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation excluding SUI and HYPE (remaining 70% in CASH).';
     default: return f;
   }
 }
@@ -93,6 +94,7 @@ function formulaDisplay(f) {
     case 'V': return 'T 1';
     case 'W': return 'T 3';
     case 'X': return 'T 4';
+    case 'Y': return 'T 5';
     default: return f;
   }
 }
@@ -170,6 +172,7 @@ function applyDominanceWithJointGroupCap({
   dominanceOrder,
   assetNames,
   cappedAssetSet,
+  excludedAssetSet = new Set(),
   jointCap = 0.30,
   totalAllocationTarget = 1.0,
 }) {
@@ -181,6 +184,7 @@ function applyDominanceWithJointGroupCap({
     if (!longMask[idx] || !hasPrice[idx]) continue;
 
     const name = assetNames[idx];
+    if (excludedAssetSet.has(name)) continue;
     let alloc = remaining;
     if (cappedAssetSet.has(name)) {
       const remainingJoint = jointCap - cappedAllocated;
@@ -679,6 +683,32 @@ function allocationForFormula(formula, ctx) {
         addWeight(btcIdx, 0.50);
       }
       break;
+    case 'Y':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.30,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE']),
+          excludedAssetSet: new Set(['SUI', 'HYPE']),
+          jointCap: 0.30,
+          totalAllocationTarget: 0.30,
+        });
+      }
+      break;
   }
 
   return { weights, paxgWeight };
@@ -1006,7 +1036,7 @@ export function runAllocationAnalysis(
     ? ltti2dAsset.candles.map((c, i) => ({ time: c.time, signal: ltti2dAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
+  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
   const formulaResults = formulas.map(f => {
     const result = runSingleFormula(
       f,
