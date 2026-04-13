@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FundamentalsPanel from './FundamentalsPanel';
+import { formatUtcDate } from '../dateTime';
 
 const FUNDAMENTALS_STORAGE_KEY = 'crypto-dashboard-fundamentals';
 const REQUIRED_FUNDAMENTAL_IDS = ['iefp', 'sth_sopr', 'sth_pl_momentum'];
@@ -41,15 +42,6 @@ function getIndicatorLastChanged(indicatorResult, candles) {
   const idx = candles.length - 1;
   const ts = indicatorResult.lastChanged?.[idx];
   return Number.isFinite(ts) ? ts : null;
-}
-
-function formatDate(ts) {
-  if (!ts || Number.isNaN(ts)) return '--';
-  return new Date(ts).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
 }
 
 function formatScore(v) {
@@ -238,8 +230,8 @@ export default function MarketPage({ ltti2dAsset, ltti3dAsset, loading, error })
                     <th>Indicator</th>
                     <th style={{ textAlign: 'center' }}>2D Score</th>
                     <th style={{ textAlign: 'center' }}>3D Score</th>
-                    <th style={{ textAlign: 'right' }}>2D Last Change</th>
-                    <th style={{ textAlign: 'right' }}>3D Last Change</th>
+                    <th style={{ textAlign: 'right' }}>2D Last Change (UTC)</th>
+                    <th style={{ textAlign: 'right' }}>3D Last Change (UTC)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -260,8 +252,8 @@ export default function MarketPage({ ltti2dAsset, ltti3dAsset, loading, error })
                           </span>
                         )}
                       </td>
-                      <td style={{ textAlign: 'right' }}>{formatDate(row.lastChange2d)}</td>
-                      <td style={{ textAlign: 'right' }}>{formatDate(row.lastChange3d)}</td>
+                      <td style={{ textAlign: 'right' }}>{formatUtcDate(row.lastChange2d)} UTC</td>
+                      <td style={{ textAlign: 'right' }}>{formatUtcDate(row.lastChange3d)} UTC</td>
                     </tr>
                   ))}
                 </tbody>

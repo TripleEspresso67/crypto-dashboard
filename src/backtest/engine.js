@@ -6,6 +6,7 @@ const INITIAL_CAPITAL = 1000;
 /**
  * Run a backtest on scored candles.
  * Long-only, 100% equity sizing, no pyramiding, 0 commission/slippage.
+ * Orders are generated on bar close and filled on next bar open (TradingView-style).
  *
  * @param {Array} candles OHLCV candle array
  * @param {number[]} compositeScores composite score per bar
@@ -23,6 +24,8 @@ export function runBacktest(candles, compositeScores, longThresh = 0.1, shortThr
   let entryPrice = 0;
   let entryTime = 0;
   let entryCapital = 0;
+  let pendingEntry = false;
+  let pendingExit = false;
   let peakEquity = INITIAL_CAPITAL;
   let maxDrawdown = 0;
 
@@ -32,28 +35,41 @@ export function runBacktest(candles, compositeScores, longThresh = 0.1, shortThr
 
     if (c.time < backtestStart) continue;
 
-    const goLong = score >= longThresh;
-    const goCash = score <= shortThresh;
-
-    if (goLong && !inLong) {
+    // Execute queued orders at current bar open.
+    if (pendingEntry && !inLong) {
       inLong = true;
-      entryPrice = c.close;
+      entryPrice = c.open;
       entryTime = c.time;
       entryCapital = capital;
+      pendingEntry = false;
     }
 
-    if (goCash && inLong) {
-      const pnlPct = (c.close - entryPrice) / entryPrice;
+    if (pendingExit && inLong) {
+      const pnlPct = (c.open - entryPrice) / entryPrice;
       capital = entryCapital * (1 + pnlPct);
       trades.push({
         entryTime,
         exitTime: c.time,
         entryPrice,
-        exitPrice: c.close,
+        exitPrice: c.open,
         pnlPct: pnlPct * 100,
         pnl: capital - entryCapital,
       });
       inLong = false;
+      pendingExit = false;
+    }
+
+    const goLong = score >= longThresh;
+    const goCash = score <= shortThresh;
+
+    // Queue orders for next bar open to match TradingView default execution timing.
+    if (i < candles.length - 1) {
+      if (goLong && !inLong && !pendingEntry) {
+        pendingEntry = true;
+      }
+      if (goCash && inLong && !pendingExit) {
+        pendingExit = true;
+      }
     }
 
     const currentEquity = inLong

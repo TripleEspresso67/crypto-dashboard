@@ -9,6 +9,23 @@ import { runBacktest } from '../backtest/engine';
 import { MTTI_OTHERS_PARAMS } from '../strategies/mttiOthersConfig';
 import { BACKTEST_DATE_PRESETS, DEFAULT_BACKTEST_START_DATE } from '../constants/backtestDates';
 
+const RATIO_ASSET_ORDER = ['BTC', 'ETH', 'BNB', 'SOL', 'DOGE', 'HYPE', 'SUI'];
+const RATIO_ASSET_ORDER_INDEX = Object.fromEntries(
+  RATIO_ASSET_ORDER.map((name, idx) => [name, idx])
+);
+
+function sortPairsByRequestedOrder(a, b) {
+  const denomA = RATIO_ASSET_ORDER_INDEX[a.denominator] ?? Number.POSITIVE_INFINITY;
+  const denomB = RATIO_ASSET_ORDER_INDEX[b.denominator] ?? Number.POSITIVE_INFINITY;
+  if (denomA !== denomB) return denomA - denomB;
+
+  const numA = RATIO_ASSET_ORDER_INDEX[a.numerator] ?? Number.POSITIVE_INFINITY;
+  const numB = RATIO_ASSET_ORDER_INDEX[b.numerator] ?? Number.POSITIVE_INFINITY;
+  if (numA !== numB) return numA - numB;
+
+  return a.label.localeCompare(b.label);
+}
+
 export default function RatioDetail({ ratioData, loading }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -27,7 +44,7 @@ export default function RatioDetail({ ratioData, loading }) {
   const activeDateStr = selectedPreset === 'custom' ? customDate : selectedPreset;
   const backtestStart = new Date(activeDateStr + 'T00:00:00Z').getTime();
 
-  const sortedPairs = ratioData?.pairs?.slice().sort((a, b) => b.score - a.score);
+  const sortedPairs = ratioData?.pairs?.slice().sort(sortPairsByRequestedOrder);
   const pair = sortedPairs?.[idx] ?? null;
 
   const recomputedBacktest = useMemo(() => {

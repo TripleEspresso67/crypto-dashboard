@@ -1,11 +1,7 @@
+import { formatUtcDate } from '../dateTime';
+
 export default function TradeList({ trades }) {
   if (!trades || trades.length === 0) return <p style={{ color: 'var(--text-secondary)' }}>No trades in backtest period.</p>;
-
-  function formatDate(ts) {
-    return new Date(ts).toLocaleDateString('en-GB', {
-      day: '2-digit', month: '2-digit', year: 'numeric'
-    });
-  }
 
   function formatPrice(p) {
     if (p >= 1000) return p.toFixed(2);
@@ -19,8 +15,8 @@ export default function TradeList({ trades }) {
         <thead>
           <tr>
             <th>#</th>
-            <th>Entry Date</th>
-            <th>Exit Date</th>
+            <th>Entry Date (UTC)</th>
+            <th>Exit Date (UTC)</th>
             <th>Entry Price</th>
             <th>Exit Price</th>
             <th>Trade P&L %</th>
@@ -34,8 +30,8 @@ export default function TradeList({ trades }) {
             return (
               <tr key={idx}>
                 <td>{idx + 1}</td>
-                <td>{formatDate(t.entryTime)}</td>
-                <td>{formatDate(t.exitTime)}</td>
+                <td>{formatUtcDate(t.entryTime)} UTC</td>
+                <td>{formatUtcDate(t.exitTime)} UTC</td>
                 <td>{formatPrice(t.entryPrice)}</td>
                 <td>{formatPrice(t.exitPrice)}</td>
                 <td style={{ color: t.pnlPct >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>

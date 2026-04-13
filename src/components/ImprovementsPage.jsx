@@ -5,8 +5,6 @@ const STORAGE_KEY = 'crypto-dashboard-improvements-notes';
 const DEFAULT_ITEMS = [
   'Create BTC short asset strategy / allocation strategy',
   'remove old strategies',
-  'integrate fundamental LTTI indicators with technical LTTI',
-  'reorder asset pairs in table',
 ];
 
 function loadNotes() {

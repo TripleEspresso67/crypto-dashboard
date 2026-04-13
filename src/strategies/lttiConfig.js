@@ -15,7 +15,7 @@ export const LTTI_PARAMS = {
   dpsd: {
     dpsd_DemaLen: 24, dpsd_DemaSrc: 'close',
     dpsd_PerLen: 32, dpsd_perUp: 60, dpsd_perDown: 40,
-    dpsd_SDlen: 27, dpsd_EmaLen: 25
+    dpsd_SDlen: 27, dpsd_EmaLen: 25, dpsd_UseEma: true
   },
   qpo: {
     qpo_length: 50, qpo_smooth: 9, qpo_atrLength: 23,

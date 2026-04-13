@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchFearGreedIndex, scoreFearGreed } from '../api/sentiment';
+import { formatUtcDateTime } from '../dateTime';
 
 const STORAGE_KEY = 'crypto-dashboard-fundamentals';
 
@@ -230,7 +231,7 @@ export default function FundamentalsPanel() {
                 </div>
                 <div style={{ flex: '0 0 120px', textAlign: 'right', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                   {inputs[`${ind.id}_ts`] ? (
-                    <span title={new Date(inputs[`${ind.id}_ts`]).toLocaleString()}>
+                    <span title={`${formatUtcDateTime(inputs[`${ind.id}_ts`])} UTC`}>
                       Updated {timeAgo(inputs[`${ind.id}_ts`])}
                     </span>
                   ) : (

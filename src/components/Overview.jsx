@@ -5,6 +5,7 @@ import { MTTI_BTC_PARAMS } from '../strategies/mttiBtcConfig';
 import { MTTI_OTHERS_PARAMS } from '../strategies/mttiOthersConfig';
 import { LTTI_PARAMS } from '../strategies/lttiConfig';
 import { BACKTEST_DATE_PRESETS, DEFAULT_BACKTEST_START_DATE } from '../constants/backtestDates';
+import { formatUtcDate } from '../dateTime';
 
 function rankDescending(values) {
   const indices = values.map((_, i) => i);
@@ -116,13 +117,6 @@ export default function Overview({ assetData, loading, error }) {
     return `$${p.toFixed(6)}`;
   }
 
-  function formatDate(ts) {
-    if (!ts || isNaN(ts)) return '';
-    return new Date(ts).toLocaleDateString('en-GB', {
-      day: '2-digit', month: '2-digit', year: 'numeric'
-    });
-  }
-
   return (
     <div>
       <div className="section">
@@ -163,7 +157,7 @@ export default function Overview({ assetData, loading, error }) {
                 </div>
                 {!isNaN(lastSignalChange) && (
                   <div className="last-change">
-                    Signal since {formatDate(lastSignalChange)}
+                    Signal since {formatUtcDate(lastSignalChange, '')} UTC
                   </div>
                 )}
               </div>

@@ -18,7 +18,7 @@ export const MTTI_OTHERS_PARAMS = {
   dpsd: {
     dpsd_DemaLen: 24, dpsd_DemaSrc: 'open',
     dpsd_PerLen: 32, dpsd_perUp: 60, dpsd_perDown: 40,
-    dpsd_SDlen: 27, dpsd_EmaLen: 25
+    dpsd_SDlen: 27, dpsd_EmaLen: 25, dpsd_UseEma: true
   },
   rsiMomentumTrend: { rmt_Len2: 14, rmt_pmom: 55, rmt_nmom: 50 },
   stochForLoop: {

@@ -1,5 +1,22 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 
+const RATIO_ASSET_ORDER = ['BTC', 'ETH', 'BNB', 'SOL', 'DOGE', 'HYPE', 'SUI'];
+const RATIO_ASSET_ORDER_INDEX = Object.fromEntries(
+  RATIO_ASSET_ORDER.map((name, idx) => [name, idx])
+);
+
+function sortPairsByRequestedOrder(a, b) {
+  const denomA = RATIO_ASSET_ORDER_INDEX[a.denominator] ?? Number.POSITIVE_INFINITY;
+  const denomB = RATIO_ASSET_ORDER_INDEX[b.denominator] ?? Number.POSITIVE_INFINITY;
+  if (denomA !== denomB) return denomA - denomB;
+
+  const numA = RATIO_ASSET_ORDER_INDEX[a.numerator] ?? Number.POSITIVE_INFINITY;
+  const numB = RATIO_ASSET_ORDER_INDEX[b.numerator] ?? Number.POSITIVE_INFINITY;
+  if (numA !== numB) return numA - numB;
+
+  return a.label.localeCompare(b.label);
+}
+
 export default function RatiosTable({ ratioData }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -7,6 +24,7 @@ export default function RatiosTable({ ratioData }) {
   if (!ratioData || !ratioData.pairs || ratioData.pairs.length === 0) return null;
 
   const { pairs, dominance } = ratioData;
+  const orderedPairs = pairs.slice().sort(sortPairsByRequestedOrder);
 
   // Approximate market-cap ordering for tie-breaks in Dominant Asset display.
   const MARKET_CAP_RANK = {
@@ -130,10 +148,7 @@ export default function RatiosTable({ ratioData }) {
               </tr>
             </thead>
             <tbody>
-              {pairs
-                .slice()
-                .sort((a, b) => b.score - a.score)
-                .map((p, idx) => {
+              {orderedPairs.map((p, idx) => {
                   const interpretation = p.signal === 'LONG'
                     ? `${p.numerator} outperforming ${p.denominator}`
                     : `${p.denominator} outperforming ${p.numerator}`;

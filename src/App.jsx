@@ -16,6 +16,7 @@ import RatiosTable from './components/RatiosTable';
 import AllocationSection from './components/AllocationSection';
 import MarketPage from './components/MarketPage';
 import ImprovementsPage from './components/ImprovementsPage';
+import { formatUtcTime } from './dateTime';
 
 const STRATEGY_PARAMS = {
   'LTTI': LTTI_PARAMS,
@@ -227,7 +228,7 @@ function App() {
           {lastLiveUpdate && (
             <div className="live-indicator">
               <span className="live-dot" />
-              LIVE &middot; {lastLiveUpdate.toLocaleTimeString()}
+              LIVE &middot; {formatUtcTime(lastLiveUpdate)} UTC
             </div>
           )}
         </div>

@@ -512,8 +512,14 @@ export function dpsdScore(candles, params) {
   const {
     dpsd_DemaLen, dpsd_DemaSrc,
     dpsd_PerLen, dpsd_perUp, dpsd_perDown,
-    dpsd_SDlen
+    dpsd_SDlen, dpsd_EmaLen, dpsd_UseEma
   } = params;
+
+  // Pine script exposes EMA confluence inputs, but in the provided BTC-MTTI script
+  // they are not applied to DPSD score calculation. Keep this as an intentional no-op
+  // to preserve parity with TradingView behaviour.
+  void dpsd_EmaLen;
+  void dpsd_UseEma;
 
   const src   = candles.map(c => c[dpsd_DemaSrc || 'close']);
   const close = candles.map(c => c.close);
