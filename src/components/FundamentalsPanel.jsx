@@ -193,7 +193,7 @@ export default function FundamentalsPanel() {
                   )}
                   {ind.id === 'sth_pl_momentum' && (
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                      Momentum: 90 Days · Smoothing: SMA 90 Days
+                      Momentum: 1 Year · Smoothing: EMA 60 Days
                     </div>
                   )}
                   <a href={ind.url} target="_blank" rel="noreferrer"
