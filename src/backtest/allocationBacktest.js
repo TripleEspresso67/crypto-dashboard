@@ -31,6 +31,16 @@ function parseSortino(val) {
   return isNaN(num) ? -Infinity : num;
 }
 
+function computeCalmar(totalReturnPct, maxDrawdownFraction) {
+  if (!isFinite(maxDrawdownFraction) || maxDrawdownFraction < 0) return NaN;
+  if (maxDrawdownFraction === 0) {
+    if (totalReturnPct > 0) return Infinity;
+    if (totalReturnPct < 0) return -Infinity;
+    return 0;
+  }
+  return totalReturnPct / (maxDrawdownFraction * 100);
+}
+
 function normalizeMetric(values, higherIsBetter = true) {
   const finite = values.filter(v => isFinite(v));
   if (finite.length === 0) return new Array(values.length).fill(0);
@@ -73,11 +83,13 @@ function formulaLabel(f) {
     case 'R': return 'Same as Strategy P, but BTC LTTI 2D is used instead of BTC LTTI 3D.';
     case 'S': return 'Same as Strategy P, but uses condition "when MTTI-BTC is LONG" instead of "when BTC LTTI 3D is LONG".';
     case 'T': return 'When BTC LTTI 3D is LONG, allocate to dominant assets in order of dominance. BNB, DOGE, SUI, and HYPE have a 30% joint allocation cap. BTC, ETH, and SOL are uncapped. CASH when BTC LTTI 3D is SHORT.';
-    case 'U': return 'Same as Strategy T, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation (remaining 70% in CASH).';
-    case 'V': return 'Same as Strategy T, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
-    case 'W': return 'Same as Strategy T 2, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
-    case 'X': return 'Same as Strategy T 2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allocate 50% to BTC (remaining 50% in CASH).';
-    case 'Y': return 'Same as Strategy T 2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation excluding SUI and HYPE (remaining 70% in CASH).';
+    case 'U': return 'Same as Strategy T 1, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation (remaining 70% in CASH).';
+    case 'V': return 'Same as Strategy T 1, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
+    case 'W': return 'Same as Strategy T 1.2, but BNB, DOGE, SUI, and HYPE have a 20% joint allocation cap.';
+    case 'X': return 'Same as Strategy T 1.2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allocate 50% to BTC (remaining 50% in CASH).';
+    case 'Y': return 'Same as Strategy T 1.2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation excluding SUI and HYPE (remaining 70% in CASH).';
+    case 'Z': return 'Same as Strategy T 1, but BNB, DOGE, SUI, and HYPE have a 50% joint allocation cap.';
+    case 'AA': return 'Same as Strategy T 2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 50% total allocation (remaining 50% in CASH).';
     default: return f;
   }
 }
@@ -90,11 +102,14 @@ function formulaDisplay(f) {
     case 'R': return 'P 3';
     case 'S': return 'P 4';
     case 'O': return 'P 1';
-    case 'U': return 'T 2';
-    case 'V': return 'T 1';
-    case 'W': return 'T 3';
-    case 'X': return 'T 4';
-    case 'Y': return 'T 5';
+    case 'T': return 'T 1';
+    case 'V': return 'T 1.1';
+    case 'U': return 'T 1.2';
+    case 'W': return 'T 1.2.1';
+    case 'X': return 'T 1.2.2';
+    case 'Y': return 'T 1.2.3';
+    case 'Z': return 'T 2';
+    case 'AA': return 'T 2.1';
     default: return f;
   }
 }
@@ -709,6 +724,45 @@ function allocationForFormula(formula, ctx) {
         });
       }
       break;
+    case 'Z':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.50,
+          totalAllocationTarget: 1.0,
+        });
+      }
+      break;
+    case 'AA':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.50,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.50,
+          totalAllocationTarget: 0.50,
+        });
+      }
+      break;
   }
 
   return { weights, paxgWeight };
@@ -873,6 +927,7 @@ function runSingleFormula(
 
   const finalEquity = equity.length > 0 ? equity[equity.length - 1].value : INITIAL_CAPITAL;
   const totalReturn = ((finalEquity - INITIAL_CAPITAL) / INITIAL_CAPITAL) * 100;
+  const calmar = computeCalmar(totalReturn, maxDrawdown);
   const wins = tradeDetails.filter(t => t.pnlPct > 0).length;
   const losses = tradeDetails.filter(t => t.pnlPct <= 0).length;
   const winRate = tradeDetails.length > 0 ? (wins / tradeDetails.length) * 100 : 0;
@@ -940,6 +995,7 @@ function runSingleFormula(
     sharpe: fmtRatio(sharpe),
     sortino: fmtRatio(sortino),
     omega: fmtRatio(omega),
+    calmar: fmtRatio(calmar),
     kelly: isNaN(kelly) ? '--' : (kelly * 100).toFixed(2),
   };
 
@@ -1036,7 +1092,7 @@ export function runAllocationAnalysis(
     ? ltti2dAsset.candles.map((c, i) => ({ time: c.time, signal: ltti2dAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
+  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA'];
   const formulaResults = formulas.map(f => {
     const result = runSingleFormula(
       f,
@@ -1090,6 +1146,7 @@ export function runAllocationAnalysis(
     maxDrawdown: r.stats.maxDrawdown,
     sortino: r.sortino,
     omega: r.stats.omega,
+    calmar: r.stats.calmar ?? '--',
     kelly: r.stats.kelly ?? '--',
   }));
 
@@ -1100,6 +1157,7 @@ export function runAllocationAnalysis(
     maxDrawdown: comparison.map(r => parseFloat(r.maxDrawdown) || Infinity),
     sortino:     comparison.map(r => parseSortino(r.sortino)),
     omega:       comparison.map(r => parseSortino(r.omega)),
+    calmar:      comparison.map(r => parseSortino(r.calmar)),
     kelly:       comparison.map(r => parseFloat(r.kelly) || -Infinity),
   };
 
@@ -1109,9 +1167,10 @@ export function runAllocationAnalysis(
   const ddRanks  = rankDescending(vals.maxDrawdown.map(v => -v));
   const sorRanks = rankDescending(vals.sortino);
   const omgRanks = rankDescending(vals.omega);
+  const calRanks = rankDescending(vals.calmar);
   const kelRanks = rankDescending(vals.kelly);
 
-  const cumScores = comparison.map((_, i) => retRanks[i] + trdRanks[i] + exeRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i] + kelRanks[i]);
+  const cumScores = comparison.map((_, i) => retRanks[i] + trdRanks[i] + exeRanks[i] + ddRanks[i] + sorRanks[i] + omgRanks[i] + calRanks[i] + kelRanks[i]);
 
   const indices = comparison.map((_, i) => i);
   indices.sort((a, b) => cumScores[a] - cumScores[b]);
@@ -1126,6 +1185,7 @@ export function runAllocationAnalysis(
   const normalizedMaxDrawdown = normalizeMetric(vals.maxDrawdown, false);
   const normalizedSortino = normalizeMetric(vals.sortino, true);
   const normalizedOmega = normalizeMetric(vals.omega, true);
+  const normalizedCalmar = normalizeMetric(vals.calmar, true);
   const normalizedKelly = normalizeMetric(vals.kelly, true);
 
   const normalizedScores = comparison.map((_, i) =>
@@ -1135,6 +1195,7 @@ export function runAllocationAnalysis(
     normalizedMaxDrawdown[i] +
     normalizedSortino[i] +
     normalizedOmega[i] +
+    normalizedCalmar[i] +
     normalizedKelly[i]
   );
   const normalizedRanks = rankDescending(normalizedScores);

@@ -151,7 +151,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
             Dominance-based strategies use time-based dominance, calculated bar-by-bar from the All Pair Ratios data.
           </div>
           <div className="helper-text" style={{ marginBottom: 12 }}>
-            Normalised Rank uses per-column min-max normalization across strategies for Total Return, Number of Trades, Number of Executions, Max Drawdown, Sortino, Omega, and Kelly. For Number of Trades, Number of Executions, and Max Drawdown, lower values are better. The seven normalized scores are summed, then ranked (highest sum = rank 1).
+            Normalised Rank uses per-column min-max normalization across strategies for Total Return, Number of Trades, Number of Executions, Max Drawdown, Sortino, Omega, Calmar, and Kelly. For Number of Trades, Number of Executions, and Max Drawdown, lower values are better. The eight normalized scores are summed, then ranked (highest sum = rank 1).
           </div>
           <div className="helper-text" style={{ marginBottom: 12 }}>
             Performance Rank uses the same normalization method but only for Total Return and Max Drawdown. Lower Max Drawdown is better.
@@ -219,7 +219,17 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                     onClick={() => setSortKey('omega')}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
-                      <span>Omega</span>
+                      <span>Omega Ratio</span>
+                      <span>&#9662;</span>
+                    </div>
+                  </th>
+                  <th
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    title="Sort highest to lowest"
+                    onClick={() => setSortKey('calmar')}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                      <span>Calmar Ratio</span>
                       <span>&#9662;</span>
                     </div>
                   </th>
@@ -362,6 +372,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                       <td style={{ textAlign: 'center' }}>{r.maxDrawdown}%</td>
                       <td style={{ textAlign: 'center' }}>{r.sortino}</td>
                       <td style={{ textAlign: 'center' }}>{r.omega}</td>
+                      <td style={{ textAlign: 'center' }}>{r.calmar}</td>
                       <td style={{ textAlign: 'center' }}>{r.kelly}%</td>
                       <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.simpleRank}</td>
                       <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.normalizedRank}</td>
