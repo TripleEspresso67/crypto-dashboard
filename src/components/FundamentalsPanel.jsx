@@ -188,7 +188,7 @@ export default function FundamentalsPanel() {
                   <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{ind.name}</div>
                   {ind.id === 'sth_sopr' && (
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                      Smoothing: DEMA 90 Days
+                      Smoothing: DEMA 75 Days
                     </div>
                   )}
                   {ind.id === 'sth_pl_momentum' && (
