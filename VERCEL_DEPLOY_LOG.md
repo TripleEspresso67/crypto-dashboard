@@ -45,3 +45,13 @@ Tracks changes that were pushed to GitHub and deployed to Vercel.
   - Updated all stale `lttiLong` references to `ltti3dLong` in allocation backtest logic.
   - Refactored allocation chart color constants into `src/components/formulaColors.js` to satisfy fast-refresh/export rules.
   - Removed React state-in-effect and purity lint violations in Market/Fundamentals-related flows while preserving behavior.
+
+## 2026-04-16
+
+- **Commit:** `1abd8b0`
+- **Branch:** `master`
+- **Summary of deployed changes:**
+  - Added new allocation strategies `T 3`, `T 4`, `T 3.1`, and `T 4.1`.
+  - Implemented 35% and 40% joint-cap variants for `BNB`, `DOGE`, `SUI`, and `HYPE`.
+  - Added corresponding SHORT-regime variants that allow 35%/40% total allocation when BTC LTTI 3D is SHORT and MTTI-BTC is LONG.
+  - Assigned unique chart colors for all active allocation strategies.
