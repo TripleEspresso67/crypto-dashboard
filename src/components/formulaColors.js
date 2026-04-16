@@ -26,4 +26,8 @@ export const FORMULA_COLORS = {
   Y: '#a78bfa',
   Z: '#34d399',
   AA: '#60a5fa',
+  AB: '#f97316',
+  AC: '#14b8a6',
+  AD: '#f43f5e',
+  AE: '#06b6d4',
 };

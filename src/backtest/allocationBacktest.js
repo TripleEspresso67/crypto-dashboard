@@ -90,6 +90,10 @@ function formulaLabel(f) {
     case 'Y': return 'Same as Strategy T 1.2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation excluding SUI and HYPE (remaining 70% in CASH).';
     case 'Z': return 'Same as Strategy T 1, but BNB, DOGE, SUI, and HYPE have a 50% joint allocation cap.';
     case 'AA': return 'Same as Strategy T 2, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 50% total allocation (remaining 50% in CASH).';
+    case 'AB': return 'Same as Strategy T 1, but BNB, DOGE, SUI, and HYPE have a 35% joint allocation cap.';
+    case 'AC': return 'Same as Strategy T 1, but BNB, DOGE, SUI, and HYPE have a 40% joint allocation cap.';
+    case 'AD': return 'Same as Strategy T 1, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 35% total allocation (remaining 65% in CASH).';
+    case 'AE': return 'Same as Strategy T 1, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 40% total allocation (remaining 60% in CASH).';
     default: return f;
   }
 }
@@ -110,6 +114,10 @@ function formulaDisplay(f) {
     case 'Y': return 'T 1.2.3';
     case 'Z': return 'T 2';
     case 'AA': return 'T 2.1';
+    case 'AB': return 'T 3';
+    case 'AD': return 'T 3.1';
+    case 'AC': return 'T 4';
+    case 'AE': return 'T 4.1';
     default: return f;
   }
 }
@@ -756,6 +764,84 @@ function allocationForFormula(formula, ctx) {
         });
       }
       break;
+    case 'AB':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.35,
+          totalAllocationTarget: 1.0,
+        });
+      }
+      break;
+    case 'AC':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.40,
+          totalAllocationTarget: 1.0,
+        });
+      }
+      break;
+    case 'AD':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.35,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.35,
+          totalAllocationTarget: 0.35,
+        });
+      }
+      break;
+    case 'AE':
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.40,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.40,
+          totalAllocationTarget: 0.40,
+        });
+      }
+      break;
   }
 
   return { weights, paxgWeight };
@@ -1083,7 +1169,7 @@ export function runAllocationAnalysis(
     ? ltti2dAsset.candles.map((c, i) => ({ time: c.time, signal: ltti2dAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA'];
+  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AD', 'AC', 'AE'];
   const formulaResults = formulas.map(f => {
     const result = runSingleFormula(
       f,
