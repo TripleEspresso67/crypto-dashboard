@@ -25,3 +25,13 @@ Tracks changes that were pushed to GitHub and deployed to Vercel.
   - Included `Calmar Ratio` in both `Simple Rank` and `Normalised Rank` calculations.
   - Renamed T-series strategy displays (`T 1`, `T 1.1`, `T 1.2`, `T 1.2.1`, `T 1.2.2`, `T 1.2.3`).
   - Added new strategies `T 2` and `T 2.1` with 50% joint-cap logic.
+
+## 2026-04-16
+
+- **Commit:** `ff41dd8`
+- **Branch:** `master`
+- **Summary of deployed changes:**
+  - Added a shared `Refresh` button in the dashboard header so every page can trigger a manual refresh.
+  - Manual refresh now reloads prices, full strategy data, Fear & Greed data, and timestamp labels.
+  - Increased automatic full strategy reloads and Fear & Greed refreshes from 5 minutes to 20 minutes while keeping live price polling at 10 seconds.
+  - Fixed React hook-ordering issues on the Market and Allocation pages that could crash the dashboard after loading completed.
