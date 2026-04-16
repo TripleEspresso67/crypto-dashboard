@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchFearGreedIndex, scoreFearGreed } from '../api/sentiment';
 import { formatUtcDateTime } from '../dateTime';
 
 const STORAGE_KEY = 'crypto-dashboard-fundamentals';
+const FEAR_GREED_REFRESH_MS = 1200000;
+const TIMESTAMP_TICK_MS = 60000;
+const DASHBOARD_REFRESH_EVENT = 'dashboard-refresh';
 
 const ONCHAIN_INDICATORS = [
   {
@@ -58,22 +61,38 @@ export default function FundamentalsPanel() {
 
   const [, setTick] = useState(0);
 
+  const refreshFearGreed = useCallback(async () => {
+    try {
+      const nextFearGreed = await fetchFearGreedIndex();
+      setFearGreed(nextFearGreed);
+      setFgError(null);
+    } catch (err) {
+      setFgError(err.message);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchFearGreedIndex()
-      .then(setFearGreed)
-      .catch(err => setFgError(err.message));
+    refreshFearGreed();
 
     const fgInterval = setInterval(() => {
-      fetchFearGreedIndex().then(setFearGreed).catch(() => {});
-    }, 300000);
+      refreshFearGreed();
+    }, FEAR_GREED_REFRESH_MS);
 
-    const tickInterval = setInterval(() => setTick(t => t + 1), 60000);
+    const tickInterval = setInterval(() => setTick(t => t + 1), TIMESTAMP_TICK_MS);
+
+    const handleDashboardRefresh = () => {
+      refreshFearGreed();
+      setTick(t => t + 1);
+    };
+
+    window.addEventListener(DASHBOARD_REFRESH_EVENT, handleDashboardRefresh);
 
     return () => {
       clearInterval(fgInterval);
       clearInterval(tickInterval);
+      window.removeEventListener(DASHBOARD_REFRESH_EVENT, handleDashboardRefresh);
     };
-  }, []);
+  }, [refreshFearGreed]);
 
   function handleChange(id, value) {
     const updated = { ...inputs, [id]: value, [`${id}_ts`]: Date.now(), lastUpdated: Date.now() };

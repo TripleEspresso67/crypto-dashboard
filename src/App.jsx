@@ -25,7 +25,8 @@ const STRATEGY_PARAMS = {
 };
 
 const LIVE_POLL_MS = 10000;
-const FULL_RELOAD_MS = 300000;
+const FULL_RELOAD_MS = 1200000;
+const DASHBOARD_REFRESH_EVENT = 'dashboard-refresh';
 
 function applyLivePrice(candles, livePrice) {
   if (!candles || candles.length === 0 || !livePrice) return candles;
@@ -45,6 +46,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastLiveUpdate, setLastLiveUpdate] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const baseDataRef = useRef([]);
   const dailyCandlesRef = useRef({});
@@ -197,6 +199,19 @@ function App() {
     [indexedAssetData]
   );
 
+  const refreshDashboard = useCallback(async () => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      await loadData();
+      await updateLivePrices();
+      window.dispatchEvent(new Event(DASHBOARD_REFRESH_EVENT));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, loadData, updateLivePrices]);
+
   return (
     <div className="app">
       <div className="app-header">
@@ -221,10 +236,18 @@ function App() {
             </NavLink>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div className="app-header-actions">
           <span className="subtitle">
             {assetData.length > 0 ? `${assetData.length} assets loaded` : ''}
           </span>
+          <button
+            type="button"
+            className="refresh-button"
+            onClick={refreshDashboard}
+            disabled={loading || isRefreshing}
+          >
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
           {lastLiveUpdate && (
             <div className="live-indicator">
               <span className="live-dot" />

@@ -74,6 +74,14 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     });
   }, [data]);
 
+  const visibleFormulaEquities = useMemo(() => {
+    const out = {};
+    for (const key of visibleFormulas) {
+      if (formulaEquities[key]) out[key] = formulaEquities[key];
+    }
+    return out;
+  }, [formulaEquities, visibleFormulas]);
+
   if (!data) return null;
 
   function handlePresetChange(e) {
@@ -99,14 +107,6 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
       return [...prev, formula];
     });
   }
-
-  const visibleFormulaEquities = useMemo(() => {
-    const out = {};
-    for (const key of visibleFormulas) {
-      if (formulaEquities[key]) out[key] = formulaEquities[key];
-    }
-    return out;
-  }, [formulaEquities, visibleFormulas]);
 
   return (
     <>

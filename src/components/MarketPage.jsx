@@ -69,19 +69,6 @@ export default function MarketPage({ ltti2dAsset, ltti3dAsset, loading, error })
     return () => window.removeEventListener('fundamentals-updated', loadFundamentals);
   }, []);
 
-  if (error) {
-    return <div className="error-msg">{error}</div>;
-  }
-
-  if (loading) {
-    return (
-      <div className="loading">
-        <div className="spinner" />
-        <p>Loading market data...</p>
-      </div>
-    );
-  }
-
   const last2dCandle = ltti2dAsset?.candles?.[ltti2dAsset.candles.length - 1];
   const last3dCandle = ltti3dAsset?.candles?.[ltti3dAsset.candles.length - 1];
   const technical2d = getAssetLastScore(ltti2dAsset);
@@ -190,6 +177,19 @@ export default function MarketPage({ ltti2dAsset, ltti3dAsset, loading, error })
     };
     return TECH_CARD_ORDER.map((key) => cards[key]).filter(c => c.asset && c.candle);
   }, [ltti2dAsset, ltti3dAsset, last2dCandle, last3dCandle, technical2d, technical3d, signal2d, signal3d]);
+
+  if (error) {
+    return <div className="error-msg">{error}</div>;
+  }
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner" />
+        <p>Loading market data...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
