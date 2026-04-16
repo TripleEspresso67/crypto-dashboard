@@ -1,35 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { createChart, LineSeries } from 'lightweight-charts';
-
-export const FORMULA_COLORS = {
-  A: '#ffffff',
-  B: '#58a6ff',
-  C: '#7ee787',
-  D: '#d2a8ff',
-  E: '#ffa657',
-  F: '#ff7b72',
-  G: '#79c0ff',
-  H: '#e3b341',
-  I: '#56d364',
-  J: '#f78166',
-  K: '#a5d6ff',
-  L: '#b392f0',
-  M: '#6ee7b7',
-  N: '#ffd166',
-  O: '#ff9e64',
-  P: '#4dd0e1',
-  Q: '#c4b5fd',
-  R: '#9ae6b4',
-  S: '#f0abfc',
-  T: '#94a3b8',
-  U: '#22d3ee',
-  V: '#f59e0b',
-  W: '#10b981',
-  X: '#fb7185',
-  Y: '#a78bfa',
-  Z: '#34d399',
-  AA: '#60a5fa',
-};
+import { FORMULA_COLORS } from './formulaColors';
 
 const getChartHeight = () => {
   const viewport = window.innerHeight || 800;
@@ -94,7 +65,11 @@ export default function FormulaEquityChart({ formulaEquities, formulaDisplayMap 
     if (!chart || !formulaEquities) return;
 
     for (const key of Object.keys(seriesMapRef.current)) {
-      try { chart.removeSeries(seriesMapRef.current[key]); } catch (_) { /* already removed */ }
+      try {
+        chart.removeSeries(seriesMapRef.current[key]);
+      } catch {
+        /* already removed */
+      }
     }
     seriesMapRef.current = {};
 
@@ -115,7 +90,7 @@ export default function FormulaEquityChart({ formulaEquities, formulaDisplayMap 
       chart.timeScale().fitContent();
       hasInitialFit.current = true;
     }
-  }, [formulaEquities]);
+  }, [formulaDisplayMap, formulaEquities]);
 
   useEffect(() => {
     const container = containerRef.current;

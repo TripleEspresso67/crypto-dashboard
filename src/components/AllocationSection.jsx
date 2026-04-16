@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { runAllocationAnalysis } from '../backtest/allocationBacktest';
 import { DEFAULT_BACKTEST_START_DATE, BACKTEST_DATE_PRESETS } from '../constants/backtestDates';
-import FormulaEquityChart, { FORMULA_COLORS } from './FormulaEquityChart';
+import FormulaEquityChart from './FormulaEquityChart';
+import { FORMULA_COLORS } from './formulaColors';
 
 export default function AllocationSection({ assetData, ratioData, paxgData }) {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     try {
       const saved = localStorage.getItem('favoriteAllocationStrategy');
       return saved || null;
-    } catch (_) {
+    } catch {
       return null;
     }
   });
@@ -62,25 +63,22 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     return rows;
   }, [data, sortKey]);
 
-  useEffect(() => {
-    if (!data?.comparison || data.comparison.length === 0) return;
-    const available = new Set(data.comparison.map(r => r.formula));
-    setVisibleFormulas(prev => {
-      const filtered = prev.filter(f => available.has(f));
-      if (filtered.length > 0) return filtered;
-      const defaults = ['A'].filter(f => available.has(f));
-      if (defaults.length > 0) return defaults;
-      return data.comparison.length > 0 ? [data.comparison[0].formula] : [];
-    });
-  }, [data]);
+  const effectiveVisibleFormulas = useMemo(() => {
+    const available = new Set((data?.comparison || []).map(r => r.formula));
+    const filtered = visibleFormulas.filter(f => available.has(f));
+    if (filtered.length > 0) return filtered;
+    const defaults = ['A'].filter(f => available.has(f));
+    if (defaults.length > 0) return defaults;
+    return data?.comparison?.length ? [data.comparison[0].formula] : [];
+  }, [data, visibleFormulas]);
 
   const visibleFormulaEquities = useMemo(() => {
     const out = {};
-    for (const key of visibleFormulas) {
+    for (const key of effectiveVisibleFormulas) {
       if (formulaEquities[key]) out[key] = formulaEquities[key];
     }
     return out;
-  }, [formulaEquities, visibleFormulas]);
+  }, [effectiveVisibleFormulas, formulaEquities]);
 
   if (!data) return null;
 
@@ -96,7 +94,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
     try {
       if (next) localStorage.setItem('favoriteAllocationStrategy', next);
       else localStorage.removeItem('favoriteAllocationStrategy');
-    } catch (_) {
+    } catch {
       // Ignore storage failures and keep in-memory state.
     }
   }
@@ -290,13 +288,13 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                             e.stopPropagation();
                             toggleFormulaVisibility(r.formula);
                           }}
-                          title={visibleFormulas.includes(r.formula) ? 'Hide strategy from chart' : 'Show strategy on chart'}
-                          aria-label={visibleFormulas.includes(r.formula) ? `Hide strategy ${r.formula} from chart` : `Show strategy ${r.formula} on chart`}
+                          title={effectiveVisibleFormulas.includes(r.formula) ? 'Hide strategy from chart' : 'Show strategy on chart'}
+                          aria-label={effectiveVisibleFormulas.includes(r.formula) ? `Hide strategy ${r.formula} from chart` : `Show strategy ${r.formula} on chart`}
                           style={{
                             border: 'none',
                             background: 'transparent',
                             cursor: 'pointer',
-                            color: visibleFormulas.includes(r.formula) ? '#e3b341' : '#4b5563',
+                            color: effectiveVisibleFormulas.includes(r.formula) ? '#e3b341' : '#4b5563',
                             fontSize: '1rem',
                             lineHeight: 1,
                             padding: 0,

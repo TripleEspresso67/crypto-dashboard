@@ -115,7 +115,6 @@ function formulaDisplay(f) {
 }
 
 function applyKellyDominanceAllocation({
-  weights,
   addWeight,
   longMask,
   hasPrice,
@@ -341,7 +340,6 @@ function allocationForFormula(formula, ctx) {
     btcLong,
     btcIdx,
     hasPrice,
-    hasPaxgPrice,
     longMask,
     dominanceOrder,
     kellyFractions,
@@ -368,7 +366,7 @@ function allocationForFormula(formula, ctx) {
       if (ltti3dLong) addWeight(dominantLongIdx, 1);
       break;
     case 'D':
-      if (lttiLong) addWeight(rankedLongIdx, 1);
+      if (ltti3dLong) addWeight(rankedLongIdx, 1);
       break;
     case 'E':
       if (btcLong) addWeight(dominantLongIdx, 1);
@@ -391,7 +389,6 @@ function allocationForFormula(formula, ctx) {
     case 'I':
       if (ltti3dLong) {
         applyKellyDominanceAllocation({
-          weights,
           addWeight,
           longMask,
           hasPrice,
@@ -406,9 +403,8 @@ function allocationForFormula(formula, ctx) {
       }
       break;
     case 'J':
-      if (lttiLong) {
+      if (ltti3dLong) {
         applyKellyDominanceAllocation({
-          weights,
           addWeight,
           longMask,
           hasPrice,
@@ -427,7 +423,6 @@ function allocationForFormula(formula, ctx) {
     case 'K':
       if (ltti3dLong) {
         applyKellyDominanceAllocation({
-          weights,
           addWeight,
           longMask,
           hasPrice,
@@ -442,9 +437,8 @@ function allocationForFormula(formula, ctx) {
       }
       break;
     case 'L':
-      if (lttiLong) {
+      if (ltti3dLong) {
         applyKellyDominanceAllocation({
-          weights,
           addWeight,
           longMask,
           hasPrice,
@@ -461,7 +455,6 @@ function allocationForFormula(formula, ctx) {
     case 'M':
       if (ltti3dLong) {
         applyKellyDominanceAllocation({
-          weights,
           addWeight,
           longMask,
           hasPrice,
@@ -476,7 +469,7 @@ function allocationForFormula(formula, ctx) {
       }
       break;
     case 'N':
-      if (lttiLong) {
+      if (ltti3dLong) {
         let nonBtcAllocated = 0;
         let suiHypeAllocated = 0;
 
@@ -817,7 +810,6 @@ function runSingleFormula(
     }
 
     const hasPrice = closeMaps.map(m => m.has(currTime));
-    const hasPaxgPrice = Boolean(paxgMap?.has(currTime));
     const longMask = mttiAssets.map((_, i) => hasPrice[i] && closeMaps[i].get(currTime).signal === 'LONG');
     const dominanceOrder = dominanceOrdersByIndex[t] || [];
     const btcLong = btcIdx >= 0 && longMask[btcIdx];
@@ -861,7 +853,6 @@ function runSingleFormula(
       btcLong,
       btcIdx,
       hasPrice,
-      hasPaxgPrice,
       longMask,
       dominanceOrder,
       kellyFractions,

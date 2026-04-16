@@ -7,6 +7,10 @@ const FEAR_GREED_REFRESH_MS = 1200000;
 const TIMESTAMP_TICK_MS = 60000;
 const DASHBOARD_REFRESH_EVENT = 'dashboard-refresh';
 
+function getNowMs() {
+  return Date.now();
+}
+
 const ONCHAIN_INDICATORS = [
   {
     id: 'iefp',
@@ -58,8 +62,7 @@ export default function FundamentalsPanel() {
   const [inputs, setInputs] = useState(loadSaved);
   const [fearGreed, setFearGreed] = useState(null);
   const [fgError, setFgError] = useState(null);
-
-  const [, setTick] = useState(0);
+  const [nowMs, setNowMs] = useState(0);
 
   const refreshFearGreed = useCallback(async () => {
     try {
@@ -72,22 +75,26 @@ export default function FundamentalsPanel() {
   }, []);
 
   useEffect(() => {
-    refreshFearGreed();
+    const initialRefresh = setTimeout(() => {
+      refreshFearGreed();
+      setNowMs(getNowMs());
+    }, 0);
 
     const fgInterval = setInterval(() => {
       refreshFearGreed();
     }, FEAR_GREED_REFRESH_MS);
 
-    const tickInterval = setInterval(() => setTick(t => t + 1), TIMESTAMP_TICK_MS);
+    const tickInterval = setInterval(() => setNowMs(getNowMs()), TIMESTAMP_TICK_MS);
 
     const handleDashboardRefresh = () => {
       refreshFearGreed();
-      setTick(t => t + 1);
+      setNowMs(getNowMs());
     };
 
     window.addEventListener(DASHBOARD_REFRESH_EVENT, handleDashboardRefresh);
 
     return () => {
+      clearTimeout(initialRefresh);
       clearInterval(fgInterval);
       clearInterval(tickInterval);
       window.removeEventListener(DASHBOARD_REFRESH_EVENT, handleDashboardRefresh);
@@ -95,7 +102,8 @@ export default function FundamentalsPanel() {
   }, [refreshFearGreed]);
 
   function handleChange(id, value) {
-    const updated = { ...inputs, [id]: value, [`${id}_ts`]: Date.now(), lastUpdated: Date.now() };
+    const now = getNowMs();
+    const updated = { ...inputs, [id]: value, [`${id}_ts`]: now, lastUpdated: now };
     setInputs(updated);
     savePersist(updated);
     window.dispatchEvent(new Event('fundamentals-updated'));
@@ -103,7 +111,7 @@ export default function FundamentalsPanel() {
 
   function timeAgo(ts) {
     if (!ts) return null;
-    const diff = Date.now() - ts;
+    const diff = Math.max(0, nowMs - ts);
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'just now';
     if (mins < 60) return `${mins}m ago`;

@@ -216,7 +216,7 @@ export async function fetchAllCandles(symbol, interval, startTime) {
   }
 }
 
-export function getWarmupStart(interval) {
+export function getWarmupStart() {
   return new Date('2017-01-01T00:00:00Z').getTime();
 }
 

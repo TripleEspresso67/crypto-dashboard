@@ -35,7 +35,7 @@ function adfTrendFilter(src, window) {
  */
 export function fsvzoScore(candles, params) {
   const {
-    fsvzo_length, fsvzo_signalLength, fsvzo_smoothingLength,
+    fsvzo_length, fsvzo_smoothingLength,
     fsvzo_fourierLength, fsvzo_adfWindow
   } = params;
 

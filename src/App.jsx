@@ -49,7 +49,6 @@ function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const baseDataRef = useRef([]);
-  const dailyCandlesRef = useRef({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -91,12 +90,11 @@ function App() {
       }
 
       baseDataRef.current = results;
-      dailyCandlesRef.current = dailyCandlesByAsset;
       setAssetData(results);
       setPaxgData(null);
 
       try {
-        const paxgCandles = await fetchAllCandles('PAXGUSDT', '1d', getWarmupStart('1d'));
+        const paxgCandles = await fetchAllCandles('PAXGUSDT', '1d', getWarmupStart());
         if (paxgCandles.length > 0) {
           setPaxgData({
             config: { symbol: 'PAXGUSDT', name: 'PAXG', interval: '1d', strategy: 'MTTI-others', label: 'PAXG (Allocation only)' },
@@ -160,7 +158,9 @@ function App() {
         try {
           const ratios = computeRatios(updatedDaily);
           setRatioData(ratios);
-        } catch (_) { /* keep existing ratio data */ }
+        } catch {
+          /* keep existing ratio data */
+        }
       }
     } catch (err) {
       console.warn('Live price update failed:', err.message);
