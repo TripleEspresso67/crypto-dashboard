@@ -35,3 +35,13 @@ Tracks changes that were pushed to GitHub and deployed to Vercel.
   - Manual refresh now reloads prices, full strategy data, Fear & Greed data, and timestamp labels.
   - Increased automatic full strategy reloads and Fear & Greed refreshes from 5 minutes to 20 minutes while keeping live price polling at 10 seconds.
   - Fixed React hook-ordering issues on the Market and Allocation pages that could crash the dashboard after loading completed.
+
+## 2026-04-16
+
+- **Commit:** `1301848`
+- **Branch:** `master`
+- **Summary of deployed changes:**
+  - Cleaned up unused code paths and lint issues across app shell, indicators, and chart components.
+  - Updated all stale `lttiLong` references to `ltti3dLong` in allocation backtest logic.
+  - Refactored allocation chart color constants into `src/components/formulaColors.js` to satisfy fast-refresh/export rules.
+  - Removed React state-in-effect and purity lint violations in Market/Fundamentals-related flows while preserving behavior.
