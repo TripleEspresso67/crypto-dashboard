@@ -1,17 +1,29 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchFearGreedIndex, scoreFearGreed } from '../api/sentiment';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { fetchFearGreedIndex, scoreFearGreed, fetchAvsTrendSignal } from '../api/sentiment';
 import { formatUtcDateTime } from '../dateTime';
 
 const STORAGE_KEY = 'crypto-dashboard-fundamentals';
 const FEAR_GREED_REFRESH_MS = 1200000;
+const AVS_REFRESH_MS = 1200000;
 const TIMESTAMP_TICK_MS = 60000;
 const DASHBOARD_REFRESH_EVENT = 'dashboard-refresh';
+const AVS_TREND_ID = 'avs_trend';
 
 function getNowMs() {
   return Date.now();
 }
 
 const ONCHAIN_INDICATORS = [
+  {
+    id: AVS_TREND_ID,
+    name: 'Bitcoin Value Range System - Trend',
+    source: 'AlphaExtract',
+    url: 'https://alphaextract.xyz/charts?selectedChart=avs-trend',
+    options: [
+      { value: '1', label: 'Bullish / Long (+1)' },
+      { value: '-1', label: 'Bearish / Short (-1)' },
+    ],
+  },
   {
     id: 'iefp',
     name: 'Short-Term Holder MVRV',
@@ -60,8 +72,14 @@ function savePersist(data) {
 
 export default function FundamentalsPanel() {
   const [inputs, setInputs] = useState(loadSaved);
+  const hasExistingAvsScoreRef = useRef(
+    inputs[AVS_TREND_ID] !== undefined && inputs[AVS_TREND_ID] !== ''
+  );
   const [fearGreed, setFearGreed] = useState(null);
   const [fgError, setFgError] = useState(null);
+  const [avsTrend, setAvsTrend] = useState(null);
+  const [avsLoading, setAvsLoading] = useState(false);
+  const [avsError, setAvsError] = useState(null);
   const [nowMs, setNowMs] = useState(0);
 
   const refreshFearGreed = useCallback(async () => {
@@ -74,9 +92,45 @@ export default function FundamentalsPanel() {
     }
   }, []);
 
+  const updateInput = useCallback((id, value, { timestamp, source = 'manual' } = {}) => {
+    const now = timestamp ?? getNowMs();
+    setInputs((prev) => {
+      const updated = {
+        ...prev,
+        [id]: value,
+        [`${id}_ts`]: now,
+        [`${id}_source`]: source,
+        lastUpdated: now,
+      };
+      savePersist(updated);
+      return updated;
+    });
+    window.dispatchEvent(new Event('fundamentals-updated'));
+  }, []);
+
+  const refreshAvsTrend = useCallback(async (applyToInputs = true) => {
+    setAvsLoading(true);
+    try {
+      const nextAvs = await fetchAvsTrendSignal();
+      setAvsTrend(nextAvs);
+      setAvsError(null);
+      if (applyToInputs) {
+        updateInput(AVS_TREND_ID, String(nextAvs.score), {
+          timestamp: nextAvs.fetchedAtMs,
+          source: 'auto',
+        });
+      }
+    } catch (err) {
+      setAvsError(err.message);
+    } finally {
+      setAvsLoading(false);
+    }
+  }, [updateInput]);
+
   useEffect(() => {
     const initialRefresh = setTimeout(() => {
       refreshFearGreed();
+      refreshAvsTrend(!hasExistingAvsScoreRef.current);
       setNowMs(getNowMs());
     }, 0);
 
@@ -84,10 +138,15 @@ export default function FundamentalsPanel() {
       refreshFearGreed();
     }, FEAR_GREED_REFRESH_MS);
 
+    const avsInterval = setInterval(() => {
+      refreshAvsTrend(true);
+    }, AVS_REFRESH_MS);
+
     const tickInterval = setInterval(() => setNowMs(getNowMs()), TIMESTAMP_TICK_MS);
 
     const handleDashboardRefresh = () => {
       refreshFearGreed();
+      refreshAvsTrend(true);
       setNowMs(getNowMs());
     };
 
@@ -96,17 +155,14 @@ export default function FundamentalsPanel() {
     return () => {
       clearTimeout(initialRefresh);
       clearInterval(fgInterval);
+      clearInterval(avsInterval);
       clearInterval(tickInterval);
       window.removeEventListener(DASHBOARD_REFRESH_EVENT, handleDashboardRefresh);
     };
-  }, [refreshFearGreed]);
+  }, [refreshFearGreed, refreshAvsTrend]);
 
   function handleChange(id, value) {
-    const now = getNowMs();
-    const updated = { ...inputs, [id]: value, [`${id}_ts`]: now, lastUpdated: now };
-    setInputs(updated);
-    savePersist(updated);
-    window.dispatchEvent(new Event('fundamentals-updated'));
+    updateInput(id, value, { source: 'manual' });
   }
 
   function timeAgo(ts) {
@@ -223,10 +279,30 @@ export default function FundamentalsPanel() {
                       Momentum: 1 Year · Smoothing: EMA 60 Days
                     </div>
                   )}
+                  {ind.id === AVS_TREND_ID && (
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                      Auto pull from AlphaExtract with manual override
+                    </div>
+                  )}
                   <a href={ind.url} target="_blank" rel="noreferrer"
                     style={{ fontSize: '0.7rem', color: 'var(--blue)' }}>
                     {ind.source} &rarr;
                   </a>
+                  {ind.id === AVS_TREND_ID && (
+                    <div style={{ marginTop: 6, fontSize: '0.68rem' }}>
+                      {avsLoading && <span style={{ color: 'var(--text-muted)' }}>Auto-detecting AVS trend...</span>}
+                      {!avsLoading && avsTrend && (
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          Auto: {avsTrend.trendLabel} ({avsTrend.signalLabel})
+                        </span>
+                      )}
+                      {!avsLoading && avsError && (
+                        <span style={{ color: 'var(--red)' }}>
+                          Auto fetch unavailable ({avsError}). Use manual input.
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div style={{ flex: '0 0 180px' }}>
                   <select
@@ -243,6 +319,27 @@ export default function FundamentalsPanel() {
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
+                  {ind.id === AVS_TREND_ID && (
+                    <button
+                      type="button"
+                      onClick={() => refreshAvsTrend(true)}
+                      disabled={avsLoading}
+                      style={{
+                        marginTop: 6,
+                        width: '100%',
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        border: '1px solid var(--border)',
+                        borderRadius: 4,
+                        background: 'var(--bg-secondary)',
+                        color: 'var(--text-primary)',
+                        cursor: avsLoading ? 'not-allowed' : 'pointer',
+                        opacity: avsLoading ? 0.7 : 1,
+                      }}
+                    >
+                      {avsLoading ? 'Fetching...' : 'Auto Fill from AVS Trend'}
+                    </button>
+                  )}
                 </div>
                 <div style={{ flex: '0 0 50px', textAlign: 'center' }}>
                   {inputs[ind.id] !== undefined && inputs[ind.id] !== '' ? (

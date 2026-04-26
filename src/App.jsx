@@ -319,7 +319,7 @@ function App() {
           <h1>Crypto Dashboard</h1>
           <span className="subtitle">LTTI &middot; MTTI-BTC &middot; MTTI-Others</span>
           <div className="app-nav" role="navigation" aria-label="Primary dashboard sections">
-            <NavLink to="/" end className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+            <NavLink to="/overview" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
               Overview
             </NavLink>
             <NavLink to="/assets" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
@@ -363,7 +363,7 @@ function App() {
       <ErrorBoundary>
         <Routes>
           <Route
-            path="/"
+            path="/overview"
             element={
               <DashboardOverview
                 loading={loading}
@@ -374,6 +374,7 @@ function App() {
               />
             }
           />
+          <Route path="/" element={<Navigate to="/overview" replace />} />
           <Route
             path="/assets"
             element={

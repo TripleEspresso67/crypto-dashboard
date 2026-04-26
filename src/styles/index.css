@@ -199,6 +199,11 @@ a {
   color: var(--blue);
 }
 
+.signal-badge.stale {
+  background: rgba(124, 132, 143, 0.22);
+  color: #a8b0ba;
+}
+
 .last-change {
   font-size: 0.75rem;
   color: var(--text-muted);

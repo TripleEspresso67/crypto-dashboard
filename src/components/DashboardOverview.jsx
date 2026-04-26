@@ -1,4 +1,8 @@
+import { useEffect, useMemo, useState } from 'react';
 import { formatUtcDate } from '../dateTime';
+
+const FUNDAMENTALS_STORAGE_KEY = 'crypto-dashboard-fundamentals';
+const REQUIRED_FUNDAMENTAL_IDS = ['avs_trend', 'iefp', 'sth_sopr', 'sth_pl_momentum'];
 
 function fmtScore(value) {
   return Number.isFinite(value) ? value.toFixed(2) : '--';
@@ -9,6 +13,15 @@ function signalClass(signal) {
   const normalized = signal.toLowerCase();
   if (normalized === 'long' || normalized === 'short' || normalized === 'cash') return normalized;
   return 'neutral';
+}
+
+function loadFundamentalInputs() {
+  try {
+    const raw = localStorage.getItem(FUNDAMENTALS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
 }
 
 function StrategySignalCard({ title, strategyLabel, asset }) {
@@ -32,6 +45,37 @@ function StrategySignalCard({ title, strategyLabel, asset }) {
 }
 
 export default function DashboardOverview({ loading, error, mttiBtc1d, ltti3d, starredStrategySummary }) {
+  const [fundamentalInputs, setFundamentalInputs] = useState({});
+
+  useEffect(() => {
+    const syncFundamentals = () => setFundamentalInputs(loadFundamentalInputs());
+    syncFundamentals();
+    window.addEventListener('fundamentals-updated', syncFundamentals);
+    return () => window.removeEventListener('fundamentals-updated', syncFundamentals);
+  }, []);
+
+  const fundamentalsReady = useMemo(
+    () => REQUIRED_FUNDAMENTAL_IDS.every(id => fundamentalInputs[id] !== undefined && fundamentalInputs[id] !== ''),
+    [fundamentalInputs]
+  );
+  const fundamentalAggregate = useMemo(() => {
+    if (!fundamentalsReady) return null;
+    const values = REQUIRED_FUNDAMENTAL_IDS
+      .map(id => parseInt(fundamentalInputs[id], 10))
+      .filter(Number.isFinite);
+    if (values.length !== REQUIRED_FUNDAMENTAL_IDS.length) return null;
+    return values.reduce((sum, v) => sum + v, 0) / values.length;
+  }, [fundamentalInputs, fundamentalsReady]);
+  const fundamentalSignal = fundamentalAggregate === null
+    ? '--'
+    : fundamentalAggregate > 0
+      ? 'Long'
+      : fundamentalAggregate < 0
+        ? 'Short'
+        : 'Neutral';
+  const allocationRows = starredStrategySummary?.allocations || [];
+  const todayUtcDate = formatUtcDate(Date.now());
+
   if (error) return <div className="error-msg">{error}</div>;
 
   if (loading) {
@@ -42,9 +86,6 @@ export default function DashboardOverview({ loading, error, mttiBtc1d, ltti3d, s
       </div>
     );
   }
-
-  const allocationRows = starredStrategySummary?.allocations || [];
-  const todayUtcDate = formatUtcDate(Date.now());
 
   return (
     <div>
@@ -57,10 +98,24 @@ export default function DashboardOverview({ loading, error, mttiBtc1d, ltti3d, s
             asset={mttiBtc1d}
           />
           <StrategySignalCard
-            title="LTTI 3D"
+            title="Technical 3D LTTI"
             strategyLabel="LTTI 3D"
             asset={ltti3d}
           />
+          <div className="asset-card" style={{ cursor: 'default' }}>
+            <div className="card-header">
+              <span className="asset-name">Fundamental LTTI</span>
+              <span className="strategy-badge">Aggregate</span>
+            </div>
+            <div className="score-row" style={{ marginTop: 8 }}>
+              <span className="composite-score">
+                Score: {fmtScore(fundamentalAggregate)}
+              </span>
+              <span className={`signal-badge ${signalClass(fundamentalSignal)}`}>
+                {fundamentalSignal}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -70,7 +125,7 @@ export default function DashboardOverview({ loading, error, mttiBtc1d, ltti3d, s
           {starredStrategySummary?.hasUpdatedToday ? (
             <span className="signal-badge info">Updated Today</span>
           ) : (
-            <span className="signal-badge neutral">No Update Today</span>
+            <span className="signal-badge stale">No Update Today</span>
           )}
         </h3>
         <div className="helper-text" style={{ marginBottom: 6 }}>

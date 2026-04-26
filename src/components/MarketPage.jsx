@@ -4,7 +4,7 @@ import FundamentalsPanel from './FundamentalsPanel';
 import { formatUtcDate } from '../dateTime';
 
 const FUNDAMENTALS_STORAGE_KEY = 'crypto-dashboard-fundamentals';
-const REQUIRED_FUNDAMENTAL_IDS = ['iefp', 'sth_sopr', 'sth_pl_momentum'];
+const REQUIRED_FUNDAMENTAL_IDS = ['iefp', 'sth_sopr', 'sth_pl_momentum', 'avs_trend'];
 const FUNDAMENTAL_MISSING_MSG = 'Fundamental Indicators need to be scored for calculation';
 
 function formatPrice(p) {
@@ -278,38 +278,40 @@ export default function MarketPage({ ltti2dAsset, ltti3dAsset, loading, error })
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Fundamental Indicator Aggregate</td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ color: 'var(--text-secondary)' }}>Fundamental Indicator Aggregate</td>
+                    <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
                       {fundamentalAggregate !== null ? fundamentalAggregate.toFixed(2) : FUNDAMENTAL_MISSING_MSG}
                     </td>
                   </tr>
                   <tr>
-                    <td>Technical Indicator (2D) Aggregate</td>
-                    <td style={{ textAlign: 'right' }}>{formatScore(technical2d)}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>Technical Indicator (2D) Aggregate</td>
+                    <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>{formatScore(technical2d)}</td>
                   </tr>
                   <tr>
-                    <td>Technical Indicator (3D) Aggregate</td>
-                    <td style={{ textAlign: 'right' }}>{formatScore(technical3d)}</td>
+                    <td style={{ fontWeight: 600 }}>Technical Indicator (3D) Aggregate</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatScore(technical3d)}</td>
                   </tr>
                   <tr>
-                    <td>Technical Indicator Overall Aggregate</td>
-                    <td style={{ textAlign: 'right' }}>{formatScore(technicalOverall)}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>Technical Indicator Overall Aggregate</td>
+                    <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>{formatScore(technicalOverall)}</td>
                   </tr>
                   <tr>
-                    <td>Fundamental + Technical Indicator (2D) Score</td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ color: 'var(--text-secondary)' }}>Fundamental + Technical Indicator (2D) Score</td>
+                    <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
                       {fundamentalPlusTechnical2d !== null ? fundamentalPlusTechnical2d.toFixed(2) : FUNDAMENTAL_MISSING_MSG}
                     </td>
                   </tr>
                   <tr>
-                    <td>Fundamental + Technical Indicator (3D) Score</td>
+                    <td style={{ fontWeight: 600 }}>Fundamental + Technical Indicator (3D) Score</td>
                     <td style={{ textAlign: 'right' }}>
-                      {fundamentalPlusTechnical3d !== null ? fundamentalPlusTechnical3d.toFixed(2) : FUNDAMENTAL_MISSING_MSG}
+                      <span style={{ fontWeight: 600 }}>
+                        {fundamentalPlusTechnical3d !== null ? fundamentalPlusTechnical3d.toFixed(2) : FUNDAMENTAL_MISSING_MSG}
+                      </span>
                     </td>
                   </tr>
                   <tr>
-                    <td style={{ fontWeight: 600 }}>Fundamental + Technical Indicator Overall Score</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                    <td style={{ color: 'var(--text-secondary)' }}>Fundamental + Technical Indicator Overall Score</td>
+                    <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
                       {fundamentalPlusTechnicalOverall !== null ? fundamentalPlusTechnicalOverall.toFixed(2) : FUNDAMENTAL_MISSING_MSG}
                     </td>
                   </tr>
