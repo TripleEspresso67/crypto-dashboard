@@ -74,7 +74,7 @@ export default function DashboardOverview({ loading, error, mttiBtc1d, ltti3d, s
           )}
         </h3>
         <div className="helper-text" style={{ marginBottom: 6 }}>
-          Selected strategy: {starredStrategySummary?.displayName || 'Starred Strategy'}
+          Selected strategy: <strong>{starredStrategySummary?.displayName || 'Starred Strategy'}</strong>
         </div>
         <div className="helper-text" style={{ marginBottom: 10 }}>
           {starredStrategySummary?.description || 'No strategy description available.'}
