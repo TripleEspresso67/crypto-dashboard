@@ -58,6 +58,16 @@ Tracks changes that were pushed to GitHub and deployed to Vercel.
 
 ## 2026-04-26
 
+- **Commit:** `fb735d6`
+- **Branch:** `master`
+- **Summary of deployed changes:**
+  - Added `Bitcoin Value Range System - Trend` to `Fundamental Indicators` with automatic long/short signal pull from AlphaExtract and manual override support.
+  - Included `AVS Trend` in `Fundamental Indicator Aggregate` and all `Fundamental + Technical` combined LTTI scores.
+  - Added `Fundamental LTTI` aggregate signal card to the Overview tab `Signal Overview` section, and renamed the technical overview card to `Technical 3D LTTI`.
+  - Updated Market LTTI table emphasis/styling for selected 3D component rows and adjusted non-emphasized rows to slightly muted text.
+  - Set default app landing route to `Overview` (`/overview`) and fixed Overview hook ordering so refresh works correctly from any tab.
+  - Added dedicated grey `No Update Today` badge styling (`signal-badge stale`) for clearer distinction from neutral/yellow signal states.
+
 - **Commit:** `7f12571`
 - **Branch:** `master`
 - **Summary of deployed changes:**
