@@ -52,7 +52,7 @@ export default function DashboardOverview({ loading, error, mttiBtc1d, ltti3d, s
         <h3 className="section-title">Signal Overview</h3>
         <div className="overview-grid">
           <StrategySignalCard
-            title="MTTI-BTC 1D"
+            title="BTC"
             strategyLabel="MTTI-BTC 1D"
             asset={mttiBtc1d}
           />
