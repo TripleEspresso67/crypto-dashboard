@@ -55,3 +55,14 @@ Tracks changes that were pushed to GitHub and deployed to Vercel.
   - Implemented 35% and 40% joint-cap variants for `BNB`, `DOGE`, `SUI`, and `HYPE`.
   - Added corresponding SHORT-regime variants that allow 35%/40% total allocation when BTC LTTI 3D is SHORT and MTTI-BTC is LONG.
   - Assigned unique chart colors for all active allocation strategies.
+
+## 2026-04-26
+
+- **Commit:** `pending-push`
+- **Branch:** `master`
+- **Summary of deployed changes:**
+  - Added a new first `Overview` tab and moved the previous asset overview to a dedicated `Assets` tab.
+  - Added overview signal cards for `MTTI-BTC 1D` and `LTTI 3D` (signal + score only, no price data).
+  - Added overview `Portfolio Allocation` panel using the starred allocation strategy, including selected strategy name, description, allocation table, and `Since` dates.
+  - Set default starred allocation strategy to `T 1.2` when no preference exists in local storage.
+  - Added blue `info` badge styling for `Updated Today` and `Today` states, and renamed nav tab label from `Improvements` to `Notes` with redirect from `/improvements` to `/notes`.

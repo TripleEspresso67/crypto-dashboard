@@ -15,9 +15,9 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
   const [favoriteFormula, setFavoriteFormula] = useState(() => {
     try {
       const saved = localStorage.getItem('favoriteAllocationStrategy');
-      return saved || null;
+      return saved || 'U';
     } catch {
-      return null;
+      return 'U';
     }
   });
 

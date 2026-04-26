@@ -4,11 +4,13 @@ import { fetchAllCandles, fetchLivePrices, getWarmupStart, ASSET_CONFIGS } from 
 import { runStrategy } from './strategies/scorer';
 import { runBacktest } from './backtest/engine';
 import { computeRatios } from './strategies/ratios';
+import { runAllocationAnalysis } from './backtest/allocationBacktest';
 import { MTTI_BTC_PARAMS } from './strategies/mttiBtcConfig';
 import { MTTI_OTHERS_PARAMS } from './strategies/mttiOthersConfig';
 import { LTTI_PARAMS } from './strategies/lttiConfig';
 import ErrorBoundary from './components/ErrorBoundary';
-import Overview from './components/Overview';
+import AssetsOverview from './components/Overview';
+import DashboardOverview from './components/DashboardOverview';
 import AssetDetail from './components/AssetDetail';
 import RatioDetail from './components/RatioDetail';
 import FormulaDetail from './components/FormulaDetail';
@@ -194,10 +196,108 @@ function App() {
     [indexedAssetData]
   );
 
+  const mttiBtc1dAsset = useMemo(
+    () => indexedAssetData.find(a => a.config.strategy === 'MTTI-BTC' && a.config.interval === '1d') || null,
+    [indexedAssetData]
+  );
+
   const assetsTabData = useMemo(
     () => indexedAssetData.filter(a => !(a.config.strategy === 'LTTI' && (a.config.interval === '2d' || a.config.interval === '3d'))),
     [indexedAssetData]
   );
+
+  const favoriteStrategyFormula = (() => {
+    try {
+      return localStorage.getItem('favoriteAllocationStrategy') || 'U';
+    } catch {
+      return 'U';
+    }
+  })();
+
+  const starredStrategySummary = useMemo(() => {
+    if (!indexedAssetData.length || !ratioData?.dominance) return null;
+    const mttiAssets = indexedAssetData.filter(a => a.config.strategy !== 'LTTI');
+    if (mttiAssets.length === 0) return null;
+
+    const allocationAnalysis = runAllocationAnalysis(
+      mttiAssets,
+      ratioData.dominance,
+      ratioData.pairs,
+      undefined,
+      ltti3dAsset,
+      paxgData,
+      ltti2dAsset
+    );
+
+    if (!allocationAnalysis) return null;
+
+    const comparisonRow = allocationAnalysis.comparison.find(row => row.formula === favoriteStrategyFormula);
+    const formulaDetails = allocationAnalysis.formulaDetails?.[favoriteStrategyFormula];
+    const barAllocations = formulaDetails?.barAllocations || [];
+    const latestAllocation = barAllocations[barAllocations.length - 1]?.weights || {};
+    const previousAllocation = barAllocations[barAllocations.length - 2]?.weights || {};
+    const changeThresholdPct = 0.01;
+
+    const totalWeightFromMap = (weightsMap) => Object.values(weightsMap || {})
+      .reduce((sum, value) => sum + (Number.isFinite(value) ? Number(value) : 0), 0);
+
+    const getWeightAtBar = (bar, asset) => {
+      if (!bar?.weights) return 0;
+      if (asset === 'CASH') return Math.max(0, 100 - totalWeightFromMap(bar.weights));
+      const value = Number(bar.weights[asset] || 0);
+      return Number.isFinite(value) ? value : 0;
+    };
+
+    const getSinceTimestamp = (asset, currentWeight) => {
+      if (barAllocations.length === 0) return null;
+      let sinceTs = barAllocations[barAllocations.length - 1]?.time ?? null;
+      for (let i = barAllocations.length - 2; i >= 0; i--) {
+        const priorWeight = getWeightAtBar(barAllocations[i], asset);
+        if (Math.abs(priorWeight - currentWeight) > changeThresholdPct) {
+          return sinceTs;
+        }
+        sinceTs = barAllocations[i]?.time ?? sinceTs;
+      }
+      return sinceTs;
+    };
+
+    const allocations = Object.entries(latestAllocation)
+      .filter(([, weight]) => Number.isFinite(weight) && weight > 0)
+      .map(([asset, weight]) => {
+        const currentWeight = Number(weight);
+        const previousWeight = Number(previousAllocation[asset] || 0);
+        return {
+          asset,
+          weight: currentWeight,
+          updated: Math.abs(currentWeight - previousWeight) > changeThresholdPct,
+          sinceTs: getSinceTimestamp(asset, currentWeight),
+        };
+      })
+      .sort((a, b) => b.weight - a.weight);
+
+    const totalAllocated = allocations.reduce((sum, row) => sum + row.weight, 0);
+    const cashWeight = Math.max(0, Number((100 - totalAllocated).toFixed(2)));
+    const previousAllocated = totalWeightFromMap(previousAllocation);
+    const previousCashWeight = Math.max(0, Number((100 - previousAllocated).toFixed(2)));
+    if (cashWeight > 0.01) {
+      allocations.push({
+        asset: 'CASH',
+        weight: cashWeight,
+        updated: Math.abs(cashWeight - previousCashWeight) > changeThresholdPct,
+        sinceTs: getSinceTimestamp('CASH', cashWeight),
+      });
+    }
+
+    const hasUpdatedToday = allocations.some(row => row.updated);
+
+    return {
+      formula: favoriteStrategyFormula,
+      displayName: comparisonRow?.displayFormula || favoriteStrategyFormula,
+      description: comparisonRow?.label || '',
+      allocations,
+      hasUpdatedToday,
+    };
+  }, [favoriteStrategyFormula, indexedAssetData, ratioData, ltti3dAsset, paxgData, ltti2dAsset]);
 
   const refreshDashboard = useCallback(async () => {
     if (isRefreshing) return;
@@ -220,6 +320,9 @@ function App() {
           <span className="subtitle">LTTI &middot; MTTI-BTC &middot; MTTI-Others</span>
           <div className="app-nav" role="navigation" aria-label="Primary dashboard sections">
             <NavLink to="/" end className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+              Overview
+            </NavLink>
+            <NavLink to="/assets" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
               Assets
             </NavLink>
             <NavLink to="/ratios" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
@@ -231,8 +334,8 @@ function App() {
             <NavLink to="/allocation" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
               Allocation
             </NavLink>
-            <NavLink to="/improvements" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
-              Improvements
+            <NavLink to="/notes" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+              Notes
             </NavLink>
           </div>
         </div>
@@ -262,7 +365,19 @@ function App() {
           <Route
             path="/"
             element={
-              <Overview
+              <DashboardOverview
+                loading={loading}
+                error={error}
+                mttiBtc1d={mttiBtc1dAsset}
+                ltti3d={ltti3dAsset}
+                starredStrategySummary={starredStrategySummary}
+              />
+            }
+          />
+          <Route
+            path="/assets"
+            element={
+              <AssetsOverview
                 assetData={assetsTabData}
                 loading={loading}
                 error={error}
@@ -312,12 +427,8 @@ function App() {
               />
             }
           />
-          <Route
-            path="/improvements"
-            element={
-              <ImprovementsPage />
-            }
-          />
+          <Route path="/notes" element={<ImprovementsPage />} />
+          <Route path="/improvements" element={<Navigate to="/notes" replace />} />
           <Route
             path="/asset/:id"
             element={<AssetDetail assetData={assetData} loading={loading} />}
