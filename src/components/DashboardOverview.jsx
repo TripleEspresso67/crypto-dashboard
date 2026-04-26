@@ -136,7 +136,7 @@ export default function DashboardOverview({ loading, error, mttiBtc1d, ltti3d, s
         </div>
         {allocationRows.length > 0 ? (
           <div className="table-scroll">
-            <table className="score-table">
+            <table className="score-table allocation-table">
               <thead>
                 <tr>
                   <th>Asset</th>
