@@ -58,7 +58,7 @@ Tracks changes that were pushed to GitHub and deployed to Vercel.
 
 ## 2026-04-26
 
-- **Commit:** `pending-push`
+- **Commit:** `7f12571`
 - **Branch:** `master`
 - **Summary of deployed changes:**
   - Added a new first `Overview` tab and moved the previous asset overview to a dedicated `Assets` tab.
