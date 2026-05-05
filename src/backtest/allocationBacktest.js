@@ -8,6 +8,7 @@ const STRATEGY_PARAMS = {
   'MTTI-others': MTTI_OTHERS_PARAMS,
 };
 const KELLY_REFERENCE_START = new Date('2023-01-01T00:00:00Z').getTime();
+const EXECUTION_FEE_RATE = 0.001;
 
 function rankDescending(values) {
   const indexed = values.map((v, i) => ({ v, i }));
@@ -249,6 +250,17 @@ function countExecutionChanges(prevWeights, nextWeights, prevPaxgWeight, nextPax
     if (Math.abs(prev - next) > epsilon) executions += 1;
   }
   return executions;
+}
+
+function computeExecutedWeightFraction(prevWeights, nextWeights, prevPaxgWeight, nextPaxgWeight) {
+  let fraction = Math.abs((nextPaxgWeight || 0) - (prevPaxgWeight || 0));
+  const n = Math.max(prevWeights?.length || 0, nextWeights?.length || 0);
+  for (let i = 0; i < n; i++) {
+    const prev = prevWeights?.[i] || 0;
+    const next = nextWeights?.[i] || 0;
+    fraction += Math.abs(next - prev);
+  }
+  return fraction;
 }
 
 function computeDominanceOrdersByTimeline(timeline, mttiAssets, ratioPairs, fallbackOrder) {
@@ -863,6 +875,7 @@ function runSingleFormula(
   const INITIAL_CAPITAL = 1000;
   const n = mttiAssets.length;
   let portfolioValue = INITIAL_CAPITAL;
+  let portfolioValueAfterFees = INITIAL_CAPITAL;
   const tradePnls = [];
   const tradeDetails = [];
   const equity = [];
@@ -926,6 +939,7 @@ function runSingleFormula(
       portfolioReturn += prevPaxgWeight * paxgReturn;
 
       portfolioValue *= (1 + portfolioReturn);
+      portfolioValueAfterFees *= (1 + portfolioReturn);
     }
 
     if (portfolioValue > peakEquity) peakEquity = portfolioValue;
@@ -946,6 +960,12 @@ function runSingleFormula(
       dominantLongIdx,
       rankedLongIdx,
     });
+
+    const executedWeightFraction = computeExecutedWeightFraction(prevWeights, currentWeights, prevPaxgWeight, paxgWeight);
+    if (executedWeightFraction > 0) {
+      const transactionFee = portfolioValueAfterFees * EXECUTION_FEE_RATE * executedWeightFraction;
+      portfolioValueAfterFees = Math.max(0, portfolioValueAfterFees - transactionFee);
+    }
 
     const invested = (currentWeights.reduce((s, w) => s + w, 0) + paxgWeight) > 0;
     const allocMap = {};
@@ -1003,7 +1023,9 @@ function runSingleFormula(
   }
 
   const finalEquity = equity.length > 0 ? equity[equity.length - 1].value : INITIAL_CAPITAL;
+  const finalEquityAfterFees = portfolioValueAfterFees;
   const totalReturn = ((finalEquity - INITIAL_CAPITAL) / INITIAL_CAPITAL) * 100;
+  const totalReturnAfterFees = ((finalEquityAfterFees - INITIAL_CAPITAL) / INITIAL_CAPITAL) * 100;
   const calmar = computeCalmar(totalReturn, maxDrawdown);
   const wins = tradeDetails.filter(t => t.pnlPct > 0).length;
   const losses = tradeDetails.filter(t => t.pnlPct <= 0).length;
@@ -1078,6 +1100,7 @@ function runSingleFormula(
 
   return {
     totalReturn: totalReturn.toFixed(2),
+    totalReturnAfterFees: totalReturnAfterFees.toFixed(2),
     sortino: fmtRatio(sortino),
     equity,
     trades: tradeDetails,
@@ -1218,6 +1241,7 @@ export function runAllocationAnalysis(
     displayFormula: r.displayFormula,
     label: r.label,
     totalReturn: r.totalReturn,
+    totalReturnAfterFees: r.totalReturnAfterFees,
     totalTrades: r.stats.numberOfTrades ?? r.stats.totalTrades,
     numberOfExecutions: r.stats.numberOfExecutions ?? 0,
     maxDrawdown: r.stats.maxDrawdown,

@@ -154,6 +154,9 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
           <div className="helper-text" style={{ marginBottom: 12 }}>
             Performance Rank uses the same normalization method but only for Total Return and Max Drawdown. Lower Max Drawdown is better.
           </div>
+          <div className="helper-text" style={{ marginBottom: 12 }}>
+            Total Return (fees - 0.1%) applies a 0.1% fee to traded notional at each rebalance and is informational only (not used in calculations for any other columns).
+          </div>
           <div className="table-scroll">
             <table className="score-table wide-table">
               <thead>
@@ -168,6 +171,16 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
                       <span>Total Return</span>
+                      <span>&#9662;</span>
+                    </div>
+                  </th>
+                  <th
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    title="Sort highest to lowest"
+                    onClick={() => setSortKey('totalReturnAfterFees')}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, gap: 2 }}>
+                      <span>Total Return (fees - 0.1%)</span>
                       <span>&#9662;</span>
                     </div>
                   </th>
@@ -365,6 +378,7 @@ export default function AllocationSection({ assetData, ratioData, paxgData }) {
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>{r.totalReturn}%</td>
+                      <td style={{ textAlign: 'center' }}>{r.totalReturnAfterFees}%</td>
                       <td style={{ textAlign: 'center' }}>{r.totalTrades}</td>
                       <td style={{ textAlign: 'center' }}>{r.numberOfExecutions}</td>
                       <td style={{ textAlign: 'center' }}>{r.maxDrawdown}%</td>
