@@ -76,3 +76,13 @@ Tracks changes that were pushed to GitHub and deployed to Vercel.
   - Added overview `Portfolio Allocation` panel using the starred allocation strategy, including selected strategy name, description, allocation table, and `Since` dates.
   - Set default starred allocation strategy to `T 1.2` when no preference exists in local storage.
   - Added blue `info` badge styling for `Updated Today` and `Today` states, and renamed nav tab label from `Improvements` to `Notes` with redirect from `/improvements` to `/notes`.
+
+## 2026-05-05
+
+- **Commit:** `897a5e6`
+- **Branch:** `master`
+- **Summary of deployed changes:**
+  - Updated Overview `Portfolio Allocation` to use a daily snapshot cadence: resets to `No Update Today` at `01:00 UTC`, captures updates at `21:45 UTC`, and keeps table allocations fixed between scheduled updates.
+  - Updated Overview `Since` display logic to show `TODAY` when the row date matches current UTC date, and show full UTC datetime otherwise, with explanatory notes under the table.
+  - Added `Total Return (fees - 0.1%)` to Allocation Strategies after `Total Return`, and computed it using traded-notional fee modeling (`0.1%` per rebalance execution amount).
+  - Kept all rank calculations unchanged; the fee-adjusted return column remains informational only and is not used in other column calculations.
