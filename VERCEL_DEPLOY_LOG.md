@@ -86,3 +86,17 @@ Tracks changes that were pushed to GitHub and deployed to Vercel.
   - Updated Overview `Since` display logic to show `TODAY` when the row date matches current UTC date, and show full UTC datetime otherwise, with explanatory notes under the table.
   - Added `Total Return (fees - 0.1%)` to Allocation Strategies after `Total Return`, and computed it using traded-notional fee modeling (`0.1%` per rebalance execution amount).
   - Kept all rank calculations unchanged; the fee-adjusted return column remains informational only and is not used in other column calculations.
+
+## 2026-05-14
+
+- **Commit:** `438a4d0`
+- **Branch:** `master`
+- **Summary of deployed changes:**
+  - Added a new `Sandbox` tab between `Allocation` and `Notes` (routed at `/sandbox`).
+  - Added a `Custom bar close strategy performance` analysis that reconstructs 24-hour bars from hourly Binance/Bybit data at each of 24 UTC start hours and re-runs the full strategy + backtest pipeline for every variant.
+  - Ran the analysis side-by-side for `BTC` (`MTTI-BTC` params) and `SOL` (`MTTI-others` params); each section renders a per-hour table of `Total Return`, `Max Drawdown`, `Sortino Ratio`, and `Trades`, plus a Total Return bar chart against `Bar Close (UTC)`.
+  - Added a `Backtest from` dropdown at the top of the tab using the standard preset options plus a Sandbox-only `1 Aug 2021` entry (the new default). Changing the date recomputes every table, chart, and summary on the page.
+  - Added a `Summary - best UTC hour to take signals` block that reports the best hour by `Total Return`, `Sortino`, and `Max Drawdown` both overall and within the `05:00-22:30 UTC` constrained window, along with min / mean / max trade counts across the 24 variants.
+  - Added a combined `BTC + SOL` section that min-max normalizes each strategy's 24-hour `Total Return` curve to 0-1 and sums them per UTC hour, with its own bar chart against `Bar Close (UTC)`.
+  - Added a `Robustness check` row that classifies each best hour as `Cluster`, `Partial cluster`, or `Isolated spike` based on whether the two adjacent UTC hours also rank in the top third of all 24 - flagging whether an apparent edge is part of a coherent peak or likely statistical noise.
+  - Fixed Bybit hourly candle fetch: `INTERVAL_MS` map now drives `closeTime` and cursor advancement instead of a hardcoded daily interval.
