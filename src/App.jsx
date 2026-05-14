@@ -17,6 +17,7 @@ import FormulaDetail from './components/FormulaDetail';
 import RatiosTable from './components/RatiosTable';
 import AllocationSection from './components/AllocationSection';
 import MarketPage from './components/MarketPage';
+import SandboxPage from './components/SandboxPage';
 import ImprovementsPage from './components/ImprovementsPage';
 import { formatUtcTime } from './dateTime';
 
@@ -334,6 +335,9 @@ function App() {
             <NavLink to="/allocation" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
               Allocation
             </NavLink>
+            <NavLink to="/sandbox" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
+              Sandbox
+            </NavLink>
             <NavLink to="/notes" className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}>
               Notes
             </NavLink>
@@ -428,6 +432,7 @@ function App() {
               />
             }
           />
+          <Route path="/sandbox" element={<SandboxPage />} />
           <Route path="/notes" element={<ImprovementsPage />} />
           <Route path="/improvements" element={<Navigate to="/notes" replace />} />
           <Route
