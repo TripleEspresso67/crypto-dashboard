@@ -100,3 +100,26 @@ Tracks changes that were pushed to GitHub and deployed to Vercel.
   - Added a combined `BTC + SOL` section that min-max normalizes each strategy's 24-hour `Total Return` curve to 0-1 and sums them per UTC hour, with its own bar chart against `Bar Close (UTC)`.
   - Added a `Robustness check` row that classifies each best hour as `Cluster`, `Partial cluster`, or `Isolated spike` based on whether the two adjacent UTC hours also rank in the top third of all 24 - flagging whether an apparent edge is part of a coherent peak or likely statistical noise.
   - Fixed Bybit hourly candle fetch: `INTERVAL_MS` map now drives `closeTime` and cursor advancement instead of a hardcoded daily interval.
+
+## 2026-05-18
+
+- **Commit:** `0b7d6c2`
+- **Branch:** `master`
+- **Summary of deployed changes:**
+  - **Allocation Strategies — new families:**
+    - Added `U 1.0`, `U 1.1`, `U 1.2` (internal codes `AF`/`AG`/`AH`). Per-asset caps `BTC 100%` / `ETH 90%` / `SOL 80%` and `SUI/BNB/DOGE/HYPE` individual `30%` + joint `40%`. Variants differ in MTTI-BTC-NOT-LONG scaling factor (`0.5` / `0.75` / `1.0`). SHORT regime: `40%` BTC if MTTI-BTC LONG, otherwise CASH.
+    - Added `V 1.0` (internal code `AI`). Same shape as `U 1.2` but small-group joint cap raised to `50%`.
+    - Added `V 1.1` (internal code `AJ`). Same as `V 1.0` but per-asset caps for `BTC/ETH/SOL` all raised to `100%`. SHORT regime allows a `40%` total with non-BTC assets jointly capped at `20%` (example: `20%` BTC + `20%` SUI = `40%`).
+    - Added `T 5.0`, `T 5.1` (internal codes `AK`/`AL`). Same as `T 1.2` but `BNB/DOGE/SUI/HYPE` joint cap raised to `40%` with individual cap `30%`. `T 5.0` keeps `T 1.2`'s `30%` SHORT total; `T 5.1` raises it to `40%`.
+    - Added `T 5.2` (internal code `AM`). Same as `T 1.2` but `BNB/DOGE/SUI/HYPE` joint cap raised to `50%` with individual cap `40%`.
+    - Added `T 5.3` (internal code `AN`). Same as `T 3.1` but `BNB/DOGE/SUI/HYPE` joint cap raised from `35%` to `40%` (no individual cap).
+    - Extracted shared `applyCappedDominanceAllocation` helper for the U / V families and added an optional `individualCap` parameter to `applyDominanceWithJointGroupCap` for the T 5 family. Registered colors and display names for `AF`-`AN`.
+  - **Sandbox tab:**
+    - Added `ETH` section between `BTC` and `SOL` using `MTTI_OTHERS_PARAMS`, with its own per-hour table and Total Return bar chart.
+    - Added a per-section multi-line `Normalised metrics` chart below each asset's table plotting normalised `Total Return`, `Max Drawdown` (inverted so higher = better), and `Sortino Ratio` across the 24 UTC bar-close hours (all metrics on a `0-1` scale).
+    - Combined section now sums `BTC + ETH + SOL` across all three normalised metrics. Existing Total-Return-only combined chart updated for 3 assets (range `0-3`); added a new 3-series combined chart (Combined-TR / Combined-MDD / Combined-Sortino) where each bar is the sum across `BTC + ETH + SOL`.
+    - Added a new `Final grand-total & grand-average score per UTC hour` section with two charts: grand total of all `9` normalised values (`3` metrics x `3` assets, range `0-9`) and grand average (`0-1`) for the same data.
+    - Updated `Summary - best UTC hour to take signals` and `Robustness check` blocks to include `ETH` (`BTC + ETH + SOL`).
+  - **Overview tab:**
+    - Removed `Updated Today` / `No Update Today` badges from the `Portfolio Allocation` section header and the related `(Resets to No Update Today at 01:00 UTC; updates at 21:45 UTC)` helper text.
+    - Removed the `21:45 UTC` daily snapshot logic, the `crypto-dashboard-allocation-snapshots` `localStorage` cache, and the `Note: the Portfolio Allocation table now updates on a scheduled daily snapshot at 21:45 UTC` helper text. The table now renders the live `allocationRows` from the starred strategy directly.
