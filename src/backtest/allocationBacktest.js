@@ -95,6 +95,15 @@ function formulaLabel(f) {
     case 'AC': return 'Same as Strategy T 1, but BNB, DOGE, SUI, and HYPE have a 40% joint allocation cap.';
     case 'AD': return 'Same as Strategy T 1, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 35% total allocation (remaining 65% in CASH).';
     case 'AE': return 'Same as Strategy T 1, but when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 40% total allocation (remaining 60% in CASH).';
+    case 'AF': return 'Strategy AF (displayed as U 1.0): 1) When BTC LTTI 3D is LONG and MTTI-BTC is LONG, allocate up to 100% of the portfolio in dominance order, only to assets whose own MTTI is LONG, respecting these per-asset caps: BTC max 100%, ETH max 90%, SOL max 80%, and SUI/BNB/DOGE/HYPE individual max 30% with a joint max of 40%. 2) When BTC LTTI 3D is LONG but MTTI-BTC is NOT LONG (SHORT or CASH), compute the same target allocation as in (1), then multiply every weight by 0.5 so total invested ≤ 50% (remainder in CASH) — for example, 70% ETH + 30% SUI becomes 35% ETH + 15% SUI. 3) When BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allocate 40% to BTC (remaining 60% in CASH). 4) When BTC LTTI 3D is SHORT and MTTI-BTC is NOT LONG, allocate 100% to CASH.';
+    case 'AG': return 'Strategy AG (displayed as U 1.1): same as Strategy U 1.0, but rule 2 uses a 0.75 scaling factor instead of 0.5. That is: when BTC LTTI 3D is LONG but MTTI-BTC is NOT LONG (SHORT or CASH), compute the U-family target allocation and multiply every weight by 0.75 so total invested ≤ 75% (remainder in CASH). Rules 1, 3 and 4 are identical to U 1.0.';
+    case 'AH': return 'Strategy AH (displayed as U 1.2): same as Strategy U 1.0, but rule 2 is removed. That is: when BTC LTTI 3D is LONG, the U-family target allocation is applied at full weight regardless of MTTI-BTC. Because the target only allocates to assets whose own MTTI is LONG, BTC is naturally 0% when MTTI-BTC is SHORT/CASH, while the other long assets (ETH/SOL/SUI/BNB/DOGE/HYPE) keep their full caps. Rules 1, 3 and 4 are identical to U 1.0.';
+    case 'AI': return 'Strategy AI (displayed as V 1.0): 1) When BTC LTTI 3D is LONG, allocate up to 100% of the portfolio in dominance order, only to assets whose own MTTI is LONG, respecting these per-asset caps: BTC max 100%, ETH max 90%, SOL max 80%, and SUI/BNB/DOGE/HYPE individual max 30% with a joint max of 50%. There is no MTTI-BTC scaling rule — the target is applied at full weight regardless of MTTI-BTC. Because BTC itself requires MTTI-BTC to be LONG, BTC is naturally 0% when MTTI-BTC is SHORT/CASH, while the other long assets (ETH/SOL/SUI/BNB/DOGE/HYPE) keep their full caps. 2) When BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allocate 40% to BTC (remaining 60% in CASH). 3) When BTC LTTI 3D is SHORT and MTTI-BTC is NOT LONG, allocate 100% to CASH.';
+    case 'AJ': return 'Strategy AJ (displayed as V 1.1): 1) When BTC LTTI 3D is LONG, allocate up to 100% of the portfolio in dominance order, only to assets whose own MTTI is LONG, respecting these per-asset caps: BTC max 100%, ETH max 100%, SOL max 100%, and SUI/BNB/DOGE/HYPE individual max 30% with a joint max of 50%. There is no MTTI-BTC scaling rule — the target is applied at full weight regardless of MTTI-BTC. BTC is naturally 0% when MTTI-BTC is SHORT/CASH because BTC requires MTTI-BTC to be LONG. 2) When BTC LTTI 3D is SHORT, allow a total allocation cap of 40%, with non-BTC assets (ETH/SOL/SUI/BNB/DOGE/HYPE) jointly capped at 20%. BTC still requires MTTI-BTC to be LONG, and each non-BTC asset still requires its own MTTI to be LONG. Assets fill in dominance order. Example: 20% BTC + 20% SUI = 40% total. If MTTI-BTC is NOT LONG, BTC is 0% and the total is limited to whatever the non-BTC group can fill (≤ 20%); the remainder is CASH.';
+    case 'AK': return 'Strategy AK (displayed as T 5.0): same as Strategy T 1.2, with two changes to the small-asset group (BNB/DOGE/SUI/HYPE): (a) the joint cap is raised from 30% to 40%, and (b) each of those assets is additionally capped individually at 30%. LONG branch: when BTC LTTI 3D is LONG, allocate up to 100% in dominance order, only to LONG assets; BTC/ETH/SOL are uncapped individually; BNB/DOGE/SUI/HYPE are capped at 30% each with a 40% joint cap. SHORT branch: when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation (remaining 70% in CASH); when MTTI-BTC is NOT LONG, 100% CASH. Note: at a 30% total the new joint/individual caps are non-binding so the SHORT-branch behaviour is functionally identical to T 1.2.';
+    case 'AL': return 'Strategy AL (displayed as T 5.1): same as Strategy T 5.0, but the SHORT-branch total allocation is raised from 30% to 40%. LONG branch is identical to T 5.0. SHORT branch: when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 40% total allocation in dominance order (BTC/ETH/SOL uncapped individually within the 40% total; BNB/DOGE/SUI/HYPE capped at 30% each with a 40% joint cap), remainder in CASH; when MTTI-BTC is NOT LONG, 100% CASH.';
+    case 'AM': return 'Strategy AM (displayed as T 5.2): same as Strategy T 1.2, with two changes to the small-asset group (BNB/DOGE/SUI/HYPE): (a) the joint cap is raised from 30% to 50%, and (b) each of those assets is additionally capped individually at 40%. LONG branch: when BTC LTTI 3D is LONG, allocate up to 100% in dominance order, only to LONG assets; BTC/ETH/SOL are uncapped individually; BNB/DOGE/SUI/HYPE are capped at 40% each with a 50% joint cap. SHORT branch: when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 30% total allocation (remaining 70% in CASH); when MTTI-BTC is NOT LONG, 100% CASH. Note: at a 30% total the new joint/individual caps are non-binding so the SHORT-branch behaviour is functionally identical to T 1.2.';
+    case 'AN': return 'Strategy AN (displayed as T 5.3): same as Strategy T 3.1, but the BNB/DOGE/SUI/HYPE joint cap is raised from 35% to 40% (no individual cap). LONG branch: when BTC LTTI 3D is LONG, allocate up to 100% in dominance order, only to LONG assets; BTC/ETH/SOL are uncapped individually; BNB/DOGE/SUI/HYPE have a 40% joint cap. SHORT branch: when BTC LTTI 3D is SHORT and MTTI-BTC is LONG, allow a 35% total allocation (remaining 65% in CASH); when MTTI-BTC is NOT LONG, 100% CASH. Note: at a 35% total the new 40% joint cap is non-binding, so the SHORT-branch behaviour is functionally identical to T 3.1.';
     default: return f;
   }
 }
@@ -119,6 +128,15 @@ function formulaDisplay(f) {
     case 'AD': return 'T 3.1';
     case 'AC': return 'T 4';
     case 'AE': return 'T 4.1';
+    case 'AF': return 'U 1.0';
+    case 'AG': return 'U 1.1';
+    case 'AH': return 'U 1.2';
+    case 'AI': return 'V 1.0';
+    case 'AJ': return 'V 1.1';
+    case 'AK': return 'T 5.0';
+    case 'AL': return 'T 5.1';
+    case 'AM': return 'T 5.2';
+    case 'AN': return 'T 5.3';
     default: return f;
   }
 }
@@ -197,6 +215,7 @@ function applyDominanceWithJointGroupCap({
   cappedAssetSet,
   excludedAssetSet = new Set(),
   jointCap = 0.30,
+  individualCap = null,
   totalAllocationTarget = 1.0,
 }) {
   let remaining = Math.max(0, Math.min(1, totalAllocationTarget));
@@ -213,12 +232,86 @@ function applyDominanceWithJointGroupCap({
       const remainingJoint = jointCap - cappedAllocated;
       if (remainingJoint <= 0) continue;
       alloc = Math.min(alloc, remainingJoint);
+      if (individualCap !== null && individualCap !== undefined) {
+        alloc = Math.min(alloc, individualCap);
+      }
     }
 
     if (!isFinite(alloc) || alloc <= 0) continue;
     addWeight(idx, alloc);
     remaining -= alloc;
     if (cappedAssetSet.has(name)) cappedAllocated += alloc;
+  }
+}
+
+/**
+ * Shared allocation logic for the "U" and "V" strategy families.
+ *
+ * Builds the LTTI-3D-LONG target allocation in dominance order using:
+ *   - per-asset caps for BTC / ETH / SOL via `perAssetCap` (default
+ *     `{ BTC: 1.00, ETH: 0.90, SOL: 0.80 }` — used by U family and V 1.0).
+ *   - SUI / BNB / DOGE / HYPE: 30% individual max + configurable joint max
+ *     (`smallJointCap` — 0.40 for U family, 0.50 for V family).
+ *
+ * An asset is only considered if its own MTTI signal is LONG (i.e. it appears
+ * in `longMask`). All other assets are ignored.
+ *
+ * The resulting weights are multiplied by `scale` before being added. Each
+ * variant differs in this scaling factor when MTTI-BTC is NOT LONG, and in
+ * `smallJointCap` / `perAssetCap`:
+ *   - U 1.0 (AF): scale=0.5,  smallJointCap=0.40, default perAssetCap
+ *   - U 1.1 (AG): scale=0.75, smallJointCap=0.40, default perAssetCap
+ *   - U 1.2 (AH): scale=1.0,  smallJointCap=0.40, default perAssetCap
+ *   - V 1.0 (AI): scale=1.0,  smallJointCap=0.50, default perAssetCap
+ *   - V 1.1 (AJ): scale=1.0,  smallJointCap=0.50, perAssetCap = all 100%
+ */
+function applyCappedDominanceAllocation({
+  addWeight,
+  longMask,
+  hasPrice,
+  dominanceOrder,
+  assetNames,
+  n,
+  scale = 1.0,
+  smallJointCap = 0.40,
+  perAssetCap = { BTC: 1.00, ETH: 0.90, SOL: 0.80 },
+}) {
+  const smallCapNames = new Set(['SUI', 'BNB', 'DOGE', 'HYPE']);
+  const SMALL_INDIV_CAP = 0.30;
+
+  const target = new Array(n).fill(0);
+  let remaining = 1.0;
+  let smallCapsAllocated = 0;
+
+  for (const idx of dominanceOrder) {
+    if (remaining <= 0) break;
+    if (!longMask[idx] || !hasPrice[idx]) continue;
+
+    const name = assetNames[idx];
+
+    let assetCap;
+    if (smallCapNames.has(name)) {
+      const remainingJoint = smallJointCap - smallCapsAllocated;
+      if (remainingJoint <= 0) continue;
+      assetCap = Math.min(SMALL_INDIV_CAP, remainingJoint);
+    } else if (perAssetCap[name] !== undefined) {
+      assetCap = perAssetCap[name];
+    } else {
+      // Unknown asset (not BTC/ETH/SOL/SUI/BNB/DOGE/HYPE) — skip.
+      continue;
+    }
+
+    const alloc = Math.min(assetCap, remaining);
+    if (!isFinite(alloc) || alloc <= 0) continue;
+
+    target[idx] = alloc;
+    remaining -= alloc;
+    if (smallCapNames.has(name)) smallCapsAllocated += alloc;
+  }
+
+  if (scale === 0) return;
+  for (let i = 0; i < n; i++) {
+    if (target[i] > 0) addWeight(i, target[i] * scale);
   }
 }
 
@@ -854,6 +947,265 @@ function allocationForFormula(formula, ctx) {
         });
       }
       break;
+    case 'AF': {
+      // Strategy AF (displayed as 'U 1.0').
+      // Small-asset joint cap 40%. LTTI 3D LONG + MTTI-BTC NOT LONG → scale
+      // every weight by 0.5 (total invested ≤ 50%).
+      if (ltti3dLong) {
+        applyCappedDominanceAllocation({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          n,
+          scale: btcLong ? 1.0 : 0.5,
+          smallJointCap: 0.40,
+        });
+      } else if (btcLong) {
+        addWeight(btcIdx, 0.40);
+      }
+      break;
+    }
+    case 'AG': {
+      // Strategy AG (displayed as 'U 1.1').
+      // Small-asset joint cap 40%. LTTI 3D LONG + MTTI-BTC NOT LONG → scale
+      // every weight by 0.75 (total invested ≤ 75%).
+      if (ltti3dLong) {
+        applyCappedDominanceAllocation({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          n,
+          scale: btcLong ? 1.0 : 0.75,
+          smallJointCap: 0.40,
+        });
+      } else if (btcLong) {
+        addWeight(btcIdx, 0.40);
+      }
+      break;
+    }
+    case 'AH': {
+      // Strategy AH (displayed as 'U 1.2').
+      // Small-asset joint cap 40%. No MTTI-BTC rule: when LTTI 3D is LONG the
+      // full target is used regardless of MTTI-BTC. BTC is naturally 0% when
+      // MTTI-BTC is SHORT/CASH because the target requires each asset's own
+      // MTTI to be LONG.
+      if (ltti3dLong) {
+        applyCappedDominanceAllocation({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          n,
+          scale: 1.0,
+          smallJointCap: 0.40,
+        });
+      } else if (btcLong) {
+        addWeight(btcIdx, 0.40);
+      }
+      break;
+    }
+    case 'AI': {
+      // Strategy AI (displayed as 'V 1.0').
+      // Same shape as U 1.2 (no MTTI-BTC rule) but small-asset joint cap is
+      // raised from 40% to 50%.
+      if (ltti3dLong) {
+        applyCappedDominanceAllocation({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          n,
+          scale: 1.0,
+          smallJointCap: 0.50,
+        });
+      } else if (btcLong) {
+        addWeight(btcIdx, 0.40);
+      }
+      break;
+    }
+    case 'AJ': {
+      // Strategy AJ (displayed as 'V 1.1').
+      // LTTI 3D LONG: same shape as V 1.0 but per-asset caps for BTC/ETH/SOL
+      // are all raised to 100%. No MTTI-BTC scaling rule.
+      // LTTI 3D SHORT: total allocation capped at 40%, with non-BTC assets
+      // (ETH/SOL/SUI/BNB/DOGE/HYPE) jointly capped at 20%. BTC requires
+      // MTTI-BTC LONG; each non-BTC asset requires its own MTTI LONG. Assets
+      // fill in dominance order.
+      if (ltti3dLong) {
+        applyCappedDominanceAllocation({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          n,
+          scale: 1.0,
+          smallJointCap: 0.50,
+          perAssetCap: { BTC: 1.00, ETH: 1.00, SOL: 1.00 },
+        });
+      } else {
+        const TOTAL_CAP = 0.40;
+        const NON_BTC_COMBINED_CAP = 0.20;
+        let remaining = TOTAL_CAP;
+        let nonBtcAllocated = 0;
+
+        for (const idx of dominanceOrder) {
+          if (remaining <= 0) break;
+          if (!longMask[idx] || !hasPrice[idx]) continue;
+
+          const name = assetNames[idx];
+          let assetCap;
+          if (name === 'BTC') {
+            // BTC needs MTTI-BTC LONG (already enforced by longMask[idx]).
+            assetCap = Math.min(TOTAL_CAP, remaining);
+          } else {
+            const remainingNonBtc = NON_BTC_COMBINED_CAP - nonBtcAllocated;
+            if (remainingNonBtc <= 0) continue;
+            // Effective per-asset non-BTC cap is the smaller of the
+            // combined-cap budget and the total-cap budget (20% either way
+            // in practice, so this works out to 20%).
+            assetCap = Math.min(NON_BTC_COMBINED_CAP, remainingNonBtc, remaining);
+          }
+
+          if (!isFinite(assetCap) || assetCap <= 0) continue;
+          addWeight(idx, assetCap);
+          remaining -= assetCap;
+          if (name !== 'BTC') nonBtcAllocated += assetCap;
+        }
+      }
+      break;
+    }
+    case 'AK': {
+      // Strategy AK (displayed as 'T 5.0'). Same as T 1.2 but the
+      // BNB/DOGE/SUI/HYPE joint cap is raised to 40% with each of those
+      // assets additionally capped individually at 30%. SHORT branch total
+      // is unchanged at 30% (joint/individual caps are non-binding there).
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.40,
+          individualCap: 0.30,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.40,
+          individualCap: 0.30,
+          totalAllocationTarget: 0.30,
+        });
+      }
+      break;
+    }
+    case 'AL': {
+      // Strategy AL (displayed as 'T 5.1'). Same as T 5.0 but SHORT branch
+      // total is raised to 40%.
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.40,
+          individualCap: 0.30,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.40,
+          individualCap: 0.30,
+          totalAllocationTarget: 0.40,
+        });
+      }
+      break;
+    }
+    case 'AM': {
+      // Strategy AM (displayed as 'T 5.2'). Same as T 1.2 but the
+      // BNB/DOGE/SUI/HYPE joint cap is raised to 50% with each of those
+      // assets additionally capped individually at 40%. SHORT branch total
+      // is unchanged at 30% (joint/individual caps are non-binding there).
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.50,
+          individualCap: 0.40,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.50,
+          individualCap: 0.40,
+          totalAllocationTarget: 0.30,
+        });
+      }
+      break;
+    }
+    case 'AN': {
+      // Strategy AN (displayed as 'T 5.3'). Same as T 3.1 but the
+      // BNB/DOGE/SUI/HYPE joint cap is raised from 35% to 40%. No individual
+      // cap. SHORT branch total stays at 35% (under that total the new 40%
+      // joint cap is non-binding, so the SHORT behaviour is functionally
+      // identical to T 3.1).
+      if (ltti3dLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.40,
+          totalAllocationTarget: 1.0,
+        });
+      } else if (btcLong) {
+        applyDominanceWithJointGroupCap({
+          addWeight,
+          longMask,
+          hasPrice,
+          dominanceOrder,
+          assetNames,
+          cappedAssetSet: new Set(['BNB', 'DOGE', 'SUI', 'HYPE']),
+          jointCap: 0.40,
+          totalAllocationTarget: 0.35,
+        });
+      }
+      break;
+    }
   }
 
   return { weights, paxgWeight };
@@ -1192,7 +1544,7 @@ export function runAllocationAnalysis(
     ? ltti2dAsset.candles.map((c, i) => ({ time: c.time, signal: ltti2dAsset.signals[i] }))
     : null;
 
-  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AD', 'AC', 'AE'];
+  const formulas = ['A', 'B', 'C', 'E', 'G', 'I', 'K', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AD', 'AC', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN'];
   const formulaResults = formulas.map(f => {
     const result = runSingleFormula(
       f,

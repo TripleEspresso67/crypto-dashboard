@@ -30,4 +30,13 @@ export const FORMULA_COLORS = {
   AC: '#14b8a6',
   AD: '#f43f5e',
   AE: '#06b6d4',
+  AF: '#fbbf24',
+  AG: '#a3e635',
+  AH: '#ec4899',
+  AI: '#38bdf8',
+  AJ: '#7c3aed',
+  AK: '#a16207',
+  AL: '#ca8a04',
+  AM: '#dc2626',
+  AN: '#0d9488',
 };

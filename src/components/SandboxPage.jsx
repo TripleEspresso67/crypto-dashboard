@@ -215,6 +215,165 @@ function TotalReturnBarChart({ results }) {
   );
 }
 
+/**
+ * Multi-line chart that overlays the per-hour normalised Total Return,
+ * Max Drawdown (inverted so larger = better), and Sortino Ratio for a single
+ * asset's 24-variant backtest. Each line is independently min-max normalised
+ * to 0..1 across the 24 hours.
+ */
+function NormalizedMetricsLineChart({ results }) {
+  const normalised = useMemo(() => buildNormalizedRows(results), [results]);
+  if (!normalised || normalised.length === 0) return null;
+
+  const width = 760;
+  const height = 320;
+  const padLeft = 64;
+  const padRight = 20;
+  const padTop = 20;
+  const padBottom = 72;
+  const chartWidth = width - padLeft - padRight;
+  const chartHeight = height - padTop - padBottom;
+
+  const yMin = 0;
+  const yMax = 1;
+  const yScale = v => padTop + chartHeight * (1 - (v - yMin) / (yMax - yMin));
+  const colWidth = chartWidth / 24;
+  const xCenter = i => padLeft + colWidth * (i + 0.5);
+
+  const tickCount = 5;
+  const ticks = [];
+  for (let i = 0; i <= tickCount; i++) {
+    ticks.push(yMin + (yMax - yMin) * (i / tickCount));
+  }
+
+  const series = [
+    { key: 'trNorm', label: 'Total Return (norm)', color: '#3fb950' },
+    { key: 'ddNorm', label: 'Max Drawdown (norm, inverted)', color: '#d29922' },
+    { key: 'sortinoNorm', label: 'Sortino Ratio (norm)', color: '#22d3ee' },
+  ];
+
+  const pathFor = key => {
+    let d = '';
+    let started = false;
+    for (const r of normalised) {
+      const v = r[key];
+      if (v === null || v === undefined || !isFinite(v)) continue;
+      const x = xCenter(r.hour);
+      const y = yScale(v);
+      d += started ? ` L ${x.toFixed(2)} ${y.toFixed(2)}` : `M ${x.toFixed(2)} ${y.toFixed(2)}`;
+      started = true;
+    }
+    return d;
+  };
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="xMidYMid meet"
+      style={{ width: '100%', height: 'auto', maxHeight: 360, background: '#1c2128', borderRadius: 8 }}
+    >
+      {ticks.map((v, idx) => {
+        const y = yScale(v);
+        return (
+          <g key={idx}>
+            <line x1={padLeft} x2={width - padRight} y1={y} y2={y} stroke="#30363d" strokeWidth={1} />
+            <text x={padLeft - 8} y={y + 4} textAnchor="end" fill="#8b949e" fontSize={11}>
+              {v.toFixed(2)}
+            </text>
+          </g>
+        );
+      })}
+
+      {series.map(s => (
+        <path
+          key={s.key}
+          d={pathFor(s.key)}
+          fill="none"
+          stroke={s.color}
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      ))}
+
+      {series.map(s => (
+        <g key={`pts-${s.key}`}>
+          {normalised.map(r => {
+            const v = r[s.key];
+            if (v === null || v === undefined || !isFinite(v)) return null;
+            return (
+              <circle
+                key={`${s.key}-${r.hour}`}
+                cx={xCenter(r.hour)}
+                cy={yScale(v)}
+                r={2.5}
+                fill={s.color}
+              >
+                <title>{`${String(r.hour).padStart(2, '0')}:00 UTC — ${s.label}: ${v.toFixed(3)}`}</title>
+              </circle>
+            );
+          })}
+        </g>
+      ))}
+
+      {Array.from({ length: 24 }, (_, hour) => (
+        <text
+          key={hour}
+          x={xCenter(hour)}
+          y={height - padBottom + 16}
+          textAnchor="middle"
+          fill="#8b949e"
+          fontSize={10}
+        >
+          {String(hour).padStart(2, '0')}
+        </text>
+      ))}
+
+      <line x1={padLeft} y1={padTop} x2={padLeft} y2={height - padBottom} stroke="#30363d" strokeWidth={1} />
+      <line
+        x1={padLeft}
+        y1={height - padBottom}
+        x2={width - padRight}
+        y2={height - padBottom}
+        stroke="#30363d"
+        strokeWidth={1}
+      />
+
+      <text
+        x={(padLeft + width - padRight) / 2}
+        y={height - 44}
+        textAnchor="middle"
+        fill="#c9d1d9"
+        fontSize={12}
+      >
+        Bar Close (UTC)
+      </text>
+
+      <text
+        x={16}
+        y={(padTop + height - padBottom) / 2}
+        textAnchor="middle"
+        fill="#c9d1d9"
+        fontSize={12}
+        transform={`rotate(-90, 16, ${(padTop + height - padBottom) / 2})`}
+      >
+        Normalised value (0–1)
+      </text>
+
+      {series.map((s, idx) => {
+        const x = padLeft + idx * 220;
+        const y = height - 14;
+        return (
+          <g key={`legend-${s.key}`}>
+            <rect x={x} y={y - 8} width={10} height={10} fill={s.color} rx={1} />
+            <text x={x + 16} y={y + 1} fill="#c9d1d9" fontSize={11}>{s.label}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 function BarCloseStrategySection({
   title,
   symbol,
@@ -364,6 +523,13 @@ function BarCloseStrategySection({
           <div style={{ marginTop: 20 }}>
             <TotalReturnBarChart results={results} />
           </div>
+
+          <div style={{ marginTop: 24 }}>
+            <div className="helper-text" style={{ marginBottom: 8 }}>
+              Normalised Total Return, Max Drawdown, and Sortino Ratio per UTC bar-close hour. Each metric is independently min-max normalised across the 24 hours so all three sit on a 0–1 scale. Max Drawdown is inverted (1 = smallest drawdown / best, 0 = largest drawdown / worst), so for all three lines <strong>higher is better</strong>.
+            </div>
+            <NormalizedMetricsLineChart results={results} />
+          </div>
         </>
       )}
     </div>
@@ -483,6 +649,102 @@ function normalizeTotalReturns(results) {
   return map;
 }
 
+function finiteMinMax(values) {
+  const f = values.filter(v => isFinite(v));
+  if (f.length === 0) return null;
+  return { min: Math.min(...f), max: Math.max(...f) };
+}
+
+/**
+ * Min-max normalise a single value to 0..1 using the supplied min/max envelope.
+ * If `higherIsBetter` is false, the result is inverted so that 1 = best and
+ * 0 = worst (used for Max Drawdown, where smaller is better).
+ *
+ * Infinite Sortino values are mapped to the appropriate extreme.
+ */
+function normaliseValue(v, mm, higherIsBetter) {
+  if (mm === null) return null;
+  if (v === Infinity) return higherIsBetter ? 1 : 0;
+  if (v === -Infinity) return higherIsBetter ? 0 : 1;
+  if (!isFinite(v)) return null;
+  const range = mm.max - mm.min;
+  if (range === 0) return 0.5;
+  const raw = (v - mm.min) / range;
+  return higherIsBetter ? raw : 1 - raw;
+}
+
+/**
+ * For a single asset's 24-hour result rows, return per-hour normalised values
+ * for Total Return, Max Drawdown (inverted), and Sortino Ratio. Each metric
+ * is independently min-max normalised across the asset's own 24 hours.
+ */
+function buildNormalizedRows(results) {
+  if (!results || results.length === 0) return null;
+  const trMM = finiteMinMax(results.map(r => r.totalReturnNum));
+  const ddMM = finiteMinMax(results.map(r => r.maxDrawdownNum));
+  const sortMM = finiteMinMax(results.map(r => r.sortinoNum));
+  return results.map(r => ({
+    hour: r.hour,
+    trNorm: normaliseValue(r.totalReturnNum, trMM, true),
+    ddNorm: normaliseValue(r.maxDrawdownNum, ddMM, false),
+    sortinoNorm: normaliseValue(r.sortinoNum, sortMM, true),
+  }));
+}
+
+/**
+ * Combine multiple assets' per-hour normalised TR / MDD / Sortino values into
+ * a single per-hour row containing:
+ *  - combinedTr, combinedDd, combinedSort: SUM of that metric's normalised
+ *    value across all assets (range 0..N for N assets).
+ *  - grandTotal: sum of all three combined metrics (range 0..3N).
+ *  - grandAverage: grandTotal / (3 * N) (range 0..1).
+ *
+ * An hour is only included if every asset has finite normalised values for
+ * every metric, so that the aggregated bars are directly comparable.
+ */
+function combineNormalizedAllMetrics(resultSets) {
+  if (!resultSets || resultSets.some(r => !r || r.length === 0)) return null;
+  const normSets = resultSets.map(buildNormalizedRows);
+  if (normSets.some(s => !s)) return null;
+
+  const required = normSets.length;
+  const byHour = new Map();
+  for (const set of normSets) {
+    for (const row of set) {
+      const e = byHour.get(row.hour) ?? {
+        hour: row.hour,
+        count: 0,
+        tr: 0, dd: 0, sort: 0,
+        trN: 0, ddN: 0, sortN: 0,
+      };
+      e.count += 1;
+      if (row.trNorm !== null) { e.tr += row.trNorm; e.trN += 1; }
+      if (row.ddNorm !== null) { e.dd += row.ddNorm; e.ddN += 1; }
+      if (row.sortinoNorm !== null) { e.sort += row.sortinoNorm; e.sortN += 1; }
+      byHour.set(row.hour, e);
+    }
+  }
+
+  const out = [];
+  for (const e of byHour.values()) {
+    if (e.count !== required) continue;
+    if (e.trN !== required || e.ddN !== required || e.sortN !== required) continue;
+    const grandTotal = e.tr + e.dd + e.sort;
+    const grandAverage = grandTotal / (3 * required);
+    out.push({
+      hour: e.hour,
+      combinedTr: e.tr,
+      combinedDd: e.dd,
+      combinedSort: e.sort,
+      grandTotal,
+      grandAverage,
+      assetCount: required,
+    });
+  }
+  out.sort((a, b) => a.hour - b.hour);
+  return out;
+}
+
 function combineResultsByHour(resultSets) {
   if (!resultSets || resultSets.some(r => !r || r.length === 0)) return null;
   const normalizedMaps = resultSets.map(normalizeTotalReturns);
@@ -532,7 +794,7 @@ function CombinedScoreBarChart({ combined }) {
   if (scores.length === 0) return null;
 
   const minV = 0;
-  const maxV = Math.max(2, Math.max(...scores) * 1.05);
+  const maxV = Math.max(3, Math.max(...scores) * 1.05);
 
   const yScale = v => padTop + chartHeight * (1 - (v - minV) / (maxV - minV));
   const colWidth = chartWidth / 24;
@@ -624,6 +886,259 @@ function CombinedScoreBarChart({ combined }) {
   );
 }
 
+/**
+ * Grouped bar chart for the combined three-metric view across all assets.
+ * For each UTC hour, three coloured bars sit side-by-side showing the SUM of
+ * the normalised metric across BTC + ETH + SOL:
+ *   - Combined Total Return (range 0..assetCount)
+ *   - Combined Max Drawdown — inverted (range 0..assetCount)
+ *   - Combined Sortino Ratio (range 0..assetCount)
+ */
+function CombinedThreeSeriesBarChart({ data }) {
+  if (!data || data.length === 0) return null;
+
+  const assetCount = data[0].assetCount || 1;
+  const yMax = assetCount;
+
+  const width = 760;
+  const height = 360;
+  const padLeft = 64;
+  const padRight = 20;
+  const padTop = 20;
+  const padBottom = 72;
+  const chartWidth = width - padLeft - padRight;
+  const chartHeight = height - padTop - padBottom;
+
+  const yScale = v => padTop + chartHeight * (1 - v / yMax);
+  const colWidth = chartWidth / 24;
+  const groupWidth = colWidth * 0.84;
+  const barWidth = groupWidth / 3;
+  const xLeft = i => padLeft + colWidth * i + (colWidth - groupWidth) / 2;
+  const zeroY = yScale(0);
+
+  const tickCount = assetCount;
+  const ticks = [];
+  for (let i = 0; i <= tickCount; i++) {
+    ticks.push((yMax * i) / tickCount);
+  }
+
+  const series = [
+    { key: 'combinedTr', label: 'Combined Total Return (norm sum)', color: '#3fb950' },
+    { key: 'combinedDd', label: 'Combined Max Drawdown (norm sum, inverted)', color: '#d29922' },
+    { key: 'combinedSort', label: 'Combined Sortino Ratio (norm sum)', color: '#22d3ee' },
+  ];
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="xMidYMid meet"
+      style={{ width: '100%', height: 'auto', maxHeight: 400, background: '#1c2128', borderRadius: 8 }}
+    >
+      {ticks.map((v, idx) => {
+        const y = yScale(v);
+        return (
+          <g key={idx}>
+            <line x1={padLeft} x2={width - padRight} y1={y} y2={y} stroke="#30363d" strokeWidth={1} />
+            <text x={padLeft - 8} y={y + 4} textAnchor="end" fill="#8b949e" fontSize={11}>
+              {v.toFixed(2)}
+            </text>
+          </g>
+        );
+      })}
+
+      {data.map(r => (
+        <g key={r.hour}>
+          {series.map((s, sIdx) => {
+            const v = r[s.key];
+            if (!isFinite(v)) return null;
+            const x = xLeft(r.hour) + sIdx * barWidth;
+            const yTop = yScale(v);
+            const h = Math.max(1, zeroY - yTop);
+            return (
+              <rect
+                key={`${r.hour}-${s.key}`}
+                x={x}
+                y={yTop}
+                width={Math.max(1, barWidth - 1)}
+                height={h}
+                fill={s.color}
+                rx={1.5}
+              >
+                <title>{`${String(r.hour).padStart(2, '0')}:00 UTC — ${s.label}: ${v.toFixed(3)} / ${assetCount.toFixed(0)}`}</title>
+              </rect>
+            );
+          })}
+        </g>
+      ))}
+
+      {Array.from({ length: 24 }, (_, hour) => (
+        <text
+          key={hour}
+          x={padLeft + colWidth * (hour + 0.5)}
+          y={height - padBottom + 16}
+          textAnchor="middle"
+          fill="#8b949e"
+          fontSize={10}
+        >
+          {String(hour).padStart(2, '0')}
+        </text>
+      ))}
+
+      <line x1={padLeft} y1={padTop} x2={padLeft} y2={height - padBottom} stroke="#30363d" strokeWidth={1} />
+      <line
+        x1={padLeft}
+        y1={height - padBottom}
+        x2={width - padRight}
+        y2={height - padBottom}
+        stroke="#30363d"
+        strokeWidth={1}
+      />
+
+      <text
+        x={(padLeft + width - padRight) / 2}
+        y={height - 44}
+        textAnchor="middle"
+        fill="#c9d1d9"
+        fontSize={12}
+      >
+        Bar Close (UTC)
+      </text>
+
+      <text
+        x={16}
+        y={(padTop + height - padBottom) / 2}
+        textAnchor="middle"
+        fill="#c9d1d9"
+        fontSize={12}
+        transform={`rotate(-90, 16, ${(padTop + height - padBottom) / 2})`}
+      >
+        {`Sum of normalised value (0–${assetCount})`}
+      </text>
+
+      {series.map((s, idx) => {
+        const x = padLeft + idx * 240;
+        const y = height - 14;
+        return (
+          <g key={`legend-${s.key}`}>
+            <rect x={x} y={y - 8} width={10} height={10} fill={s.color} rx={1} />
+            <text x={x + 16} y={y + 1} fill="#c9d1d9" fontSize={11}>{s.label}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/**
+ * Single-bar-per-hour chart showing the grand total of all normalised
+ * metrics (Total Return + inverted Max Drawdown + Sortino) summed across
+ * every asset. With 3 assets × 3 metrics the score ranges from 0 to 9.
+ *
+ * Also supports an "average" mode where the value is grandTotal / (3 * assets)
+ * (range 0..1), used for the final 0–1 summary chart.
+ */
+function GrandScoreBarChart({ data, valueKey, yMax, yLabel, format, color = '#a371f7' }) {
+  if (!data || data.length === 0) return null;
+
+  const width = 760;
+  const height = 340;
+  const padLeft = 72;
+  const padRight = 20;
+  const padTop = 20;
+  const padBottom = 56;
+  const chartWidth = width - padLeft - padRight;
+  const chartHeight = height - padTop - padBottom;
+
+  const yScale = v => padTop + chartHeight * (1 - v / yMax);
+  const colWidth = chartWidth / 24;
+  const barWidth = colWidth * 0.68;
+  const xCenter = i => padLeft + colWidth * (i + 0.5);
+  const zeroY = yScale(0);
+
+  const tickCount = 6;
+  const ticks = [];
+  for (let i = 0; i <= tickCount; i++) {
+    ticks.push((yMax * i) / tickCount);
+  }
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="xMidYMid meet"
+      style={{ width: '100%', height: 'auto', maxHeight: 380, background: '#1c2128', borderRadius: 8 }}
+    >
+      {ticks.map((v, idx) => {
+        const y = yScale(v);
+        return (
+          <g key={idx}>
+            <line x1={padLeft} x2={width - padRight} y1={y} y2={y} stroke="#30363d" strokeWidth={1} />
+            <text x={padLeft - 8} y={y + 4} textAnchor="end" fill="#8b949e" fontSize={11}>
+              {format(v)}
+            </text>
+          </g>
+        );
+      })}
+
+      {data.map(r => {
+        const v = r[valueKey];
+        if (!isFinite(v)) return null;
+        const x = xCenter(r.hour) - barWidth / 2;
+        const yTop = yScale(v);
+        const h = Math.max(1, zeroY - yTop);
+        return (
+          <rect key={r.hour} x={x} y={yTop} width={barWidth} height={h} fill={color} rx={2}>
+            <title>{`${String(r.hour).padStart(2, '0')}:00 UTC — ${format(v)}`}</title>
+          </rect>
+        );
+      })}
+
+      {Array.from({ length: 24 }, (_, hour) => (
+        <text
+          key={hour}
+          x={xCenter(hour)}
+          y={height - padBottom + 16}
+          textAnchor="middle"
+          fill="#8b949e"
+          fontSize={10}
+        >
+          {String(hour).padStart(2, '0')}
+        </text>
+      ))}
+
+      <line x1={padLeft} y1={padTop} x2={padLeft} y2={height - padBottom} stroke="#30363d" strokeWidth={1} />
+      <line
+        x1={padLeft}
+        y1={height - padBottom}
+        x2={width - padRight}
+        y2={height - padBottom}
+        stroke="#30363d"
+        strokeWidth={1}
+      />
+
+      <text
+        x={(padLeft + width - padRight) / 2}
+        y={height - 12}
+        textAnchor="middle"
+        fill="#c9d1d9"
+        fontSize={12}
+      >
+        Bar Close (UTC)
+      </text>
+
+      <text
+        x={16}
+        y={(padTop + height - padBottom) / 2}
+        textAnchor="middle"
+        fill="#c9d1d9"
+        fontSize={12}
+        transform={`rotate(-90, 16, ${(padTop + height - padBottom) / 2})`}
+      >
+        {yLabel}
+      </text>
+    </svg>
+  );
+}
+
 function CombinedSummaryRow({ label, combined }) {
   if (!combined || combined.length === 0) {
     return (
@@ -688,8 +1203,9 @@ function RobustnessLine({ label, results, accessor, higherIsBetter = true, metri
   );
 }
 
-function RobustnessSummaryRow({ btcResults, solResults, combined }) {
+function RobustnessSummaryRow({ btcResults, ethResults, solResults, combined }) {
   const ready = (btcResults && btcResults.length > 0)
+    || (ethResults && ethResults.length > 0)
     || (solResults && solResults.length > 0)
     || (combined && combined.length > 0);
 
@@ -717,13 +1233,19 @@ function RobustnessSummaryRow({ btcResults, solResults, combined }) {
           metricFormat={v => `${v.toFixed(2)}%`}
         />
         <RobustnessLine
+          label="MTTI-others (ETH) — Total Return"
+          results={ethResults}
+          accessor={r => r.totalReturnNum}
+          metricFormat={v => `${v.toFixed(2)}%`}
+        />
+        <RobustnessLine
           label="MTTI-others (SOL) — Total Return"
           results={solResults}
           accessor={r => r.totalReturnNum}
           metricFormat={v => `${v.toFixed(2)}%`}
         />
         <RobustnessLine
-          label="Combined (BTC + SOL, normalized score)"
+          label="Combined (BTC + ETH + SOL, normalized score)"
           results={combined}
           accessor={r => r.score}
           metricFormat={v => v.toFixed(3)}
@@ -803,6 +1325,7 @@ function StrategySummaryRow({ label, results }) {
 
 export default function SandboxPage() {
   const [btcResults, setBtcResults] = useState(null);
+  const [ethResults, setEthResults] = useState(null);
   const [solResults, setSolResults] = useState(null);
   const [selectedPreset, setSelectedPreset] = useState(SANDBOX_DEFAULT_BACKTEST_DATE);
   const [customDate, setCustomDate] = useState(SANDBOX_DEFAULT_BACKTEST_DATE);
@@ -815,11 +1338,17 @@ export default function SandboxPage() {
   const backtestLabel = useMemo(() => formatDateLabel(activeDateStr), [activeDateStr]);
 
   const onBtcResults = useCallback(r => setBtcResults(r), []);
+  const onEthResults = useCallback(r => setEthResults(r), []);
   const onSolResults = useCallback(r => setSolResults(r), []);
 
   const combinedResults = useMemo(
-    () => combineResultsByHour([btcResults, solResults]),
-    [btcResults, solResults],
+    () => combineResultsByHour([btcResults, ethResults, solResults]),
+    [btcResults, ethResults, solResults],
+  );
+
+  const combinedAllMetrics = useMemo(
+    () => combineNormalizedAllMetrics([btcResults, ethResults, solResults]),
+    [btcResults, ethResults, solResults],
   );
 
   function handlePresetChange(e) {
@@ -855,7 +1384,7 @@ export default function SandboxPage() {
           )}
         </div>
         <div className="helper-text" style={{ marginTop: 8 }}>
-          Changing this date re-runs every backtest below — the BTC and SOL hourly tables and charts, the summary, and the combined score chart all update.
+          Changing this date re-runs every backtest below — the BTC, ETH, and SOL hourly tables and charts, the summary, the combined score chart, and the final grand-total / grand-average charts all update.
         </div>
       </div>
 
@@ -868,6 +1397,16 @@ export default function SandboxPage() {
         backtestStart={backtestStart}
         backtestLabel={backtestLabel}
         onResults={onBtcResults}
+      />
+      <BarCloseStrategySection
+        title="Custom bar close strategy performance — ETH"
+        symbol="ETHUSDT"
+        assetLabel="ETH"
+        strategyName="MTTI-others"
+        strategyParams={MTTI_OTHERS_PARAMS}
+        backtestStart={backtestStart}
+        backtestLabel={backtestLabel}
+        onResults={onEthResults}
       />
       <BarCloseStrategySection
         title="Custom bar close strategy performance — SOL"
@@ -889,18 +1428,20 @@ export default function SandboxPage() {
           Total Return is the most direct measure of profitability, Sortino is risk-adjusted return, and Max Drawdown captures the worst peak-to-trough loss. These three metrics often disagree — pick whichever matches how you want to evaluate the strategy.
         </div>
         <div className="helper-text" style={{ marginBottom: 12 }}>
-          The <strong>Combined score</strong> is computed by min-max normalizing each strategy's 24-hour Total Return curve into the range 0 (worst hour for that strategy) to 1 (best hour for that strategy), then summing the normalized values across the two strategies for each UTC hour. With two strategies the score ranges from 0.000 to 2.000 and has no units — it is purely a relative ranking.
+          The <strong>Combined score</strong> is computed by min-max normalizing each strategy's 24-hour Total Return curve into the range 0 (worst hour for that strategy) to 1 (best hour for that strategy), then summing the normalized values across the three strategies for each UTC hour. With three strategies the score ranges from 0.000 to 3.000 and has no units — it is purely a relative ranking.
         </div>
 
         <ul style={{ paddingLeft: 20, color: 'var(--text-primary)', listStyle: 'none' }}>
           <StrategySummaryRow label="MTTI-BTC (BTC)" results={btcResults} />
+          <StrategySummaryRow label="MTTI-others (ETH)" results={ethResults} />
           <StrategySummaryRow label="MTTI-others (SOL)" results={solResults} />
           <CombinedSummaryRow
-            label="Combined (BTC + SOL, normalized Total Return score)"
+            label="Combined (BTC + ETH + SOL, normalized Total Return score)"
             combined={combinedResults}
           />
           <RobustnessSummaryRow
             btcResults={btcResults}
+            ethResults={ethResults}
             solResults={solResults}
             combined={combinedResults}
           />
@@ -908,15 +1449,75 @@ export default function SandboxPage() {
       </div>
 
       <div className="section">
-        <h3 className="section-title">Combined normalized Total Return score per UTC hour</h3>
+        <h3 className="section-title">Combined normalized scores per UTC hour</h3>
         <div className="helper-text" style={{ marginBottom: 12 }}>
-          Each BTC and SOL Total Return curve is min-max normalized to 0–1 across the 24 hours and then summed per UTC bar-close hour. Higher is better. The chart appears once both BTC and SOL hourly backtests have finished.
+          Each asset's 24-hour metric curves are independently min-max normalised to 0–1 and then summed per UTC bar-close hour across BTC + ETH + SOL. The charts appear once all three hourly backtests have finished. <strong>Higher is better in every chart</strong> — Max Drawdown is inverted before summing so that 1 = smallest drawdown for an asset and 0 = largest.
         </div>
 
+        <div style={{ marginTop: 16, marginBottom: 8, color: '#c9d1d9', fontWeight: 600 }}>
+          Combined Total Return only (existing view)
+        </div>
+        <div className="helper-text" style={{ marginBottom: 8 }}>
+          BTC + ETH + SOL normalised Total Return summed per hour. Range 0–3.
+        </div>
         {combinedResults && combinedResults.length > 0 ? (
           <CombinedScoreBarChart combined={combinedResults} />
         ) : (
-          <div className="helper-text">Waiting for both BTC and SOL hourly backtests to finish…</div>
+          <div className="helper-text">Waiting for BTC, ETH, and SOL hourly backtests to finish…</div>
+        )}
+
+        <div style={{ marginTop: 24, marginBottom: 8, color: '#c9d1d9', fontWeight: 600 }}>
+          Combined Total Return + Max Drawdown + Sortino (per metric)
+        </div>
+        <div className="helper-text" style={{ marginBottom: 8 }}>
+          Three coloured bars per UTC hour: each is the sum of one normalised metric across BTC + ETH + SOL. Range 0–3 per bar. Useful for seeing whether one hour is good for profitability but bad for drawdown / risk-adjusted return.
+        </div>
+        {combinedAllMetrics && combinedAllMetrics.length > 0 ? (
+          <CombinedThreeSeriesBarChart data={combinedAllMetrics} />
+        ) : (
+          <div className="helper-text">Waiting for BTC, ETH, and SOL hourly backtests to finish…</div>
+        )}
+      </div>
+
+      <div className="section">
+        <h3 className="section-title">Final grand-total &amp; grand-average score per UTC hour</h3>
+        <div className="helper-text" style={{ marginBottom: 8 }}>
+          The ultimate single-number ranking. For each UTC bar-close hour we take all three normalised metrics (Total Return, inverted Max Drawdown, Sortino Ratio) from each of the three assets (BTC + ETH + SOL) and combine them into a single per-hour score. <strong>Higher is better</strong> in both charts.
+        </div>
+        <div className="helper-text" style={{ marginBottom: 12 }}>
+          The total chart sums all <strong>3 metrics × 3 assets = 9 normalised values</strong> (range 0–9). The average chart divides that by 9 so the scale is 0–1 — same ranking, friendlier numbers. Max Drawdown is inverted before being aggregated because smaller drawdowns are better.
+        </div>
+
+        <div style={{ marginTop: 8, marginBottom: 8, color: '#c9d1d9', fontWeight: 600 }}>
+          Grand total per hour (range 0–9)
+        </div>
+        {combinedAllMetrics && combinedAllMetrics.length > 0 ? (
+          <GrandScoreBarChart
+            data={combinedAllMetrics}
+            valueKey="grandTotal"
+            yMax={Math.max(9, 3 * (combinedAllMetrics[0].assetCount || 3))}
+            yLabel="Grand total of normalised metrics"
+            format={v => v.toFixed(2)}
+            color="#a371f7"
+          />
+        ) : (
+          <div className="helper-text">Waiting for BTC, ETH, and SOL hourly backtests to finish…</div>
+        )}
+
+        <div style={{ marginTop: 24, marginBottom: 8, color: '#c9d1d9', fontWeight: 600 }}>
+          Grand average per hour (range 0–1)
+        </div>
+        {combinedAllMetrics && combinedAllMetrics.length > 0 ? (
+          <GrandScoreBarChart
+            data={combinedAllMetrics}
+            valueKey="grandAverage"
+            yMax={1}
+            yLabel="Grand average of normalised metrics"
+            format={v => v.toFixed(2)}
+            color="#f778ba"
+          />
+        ) : (
+          <div className="helper-text">Waiting for BTC, ETH, and SOL hourly backtests to finish…</div>
         )}
       </div>
     </div>
